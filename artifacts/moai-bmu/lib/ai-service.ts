@@ -5,16 +5,19 @@ import {
   parseLocalDateTime,
   type LandingRecord,
 } from './domain';
+import {
+  aiSuggestSpecies,
+  aiTranscribe,
+  type SuggestSpeciesRequest,
+  type SuggestSpeciesResponse,
+  type TranscribeAudioRequest,
+} from '@workspace/api-client-react';
 
 export type DemoAiService = {
   makePreparedVoiceDraft: (site: string) => LandingRecord;
   makePreparedPhotoDraft: (site: string) => LandingRecord;
-  transcribeAudio: (audioUri: string) => Promise<never>;
-  analyzeImage: (imageUri: string) => Promise<never>;
-};
-
-const notConfigured = async (): Promise<never> => {
-  throw new Error('Real voice transcription and image analysis are not configured in this prototype.');
+  transcribeAudio: (request: TranscribeAudioRequest) => Promise<{ transcript: string }>;
+  analyzeImage: (request: SuggestSpeciesRequest) => Promise<SuggestSpeciesResponse>;
 };
 
 export const aiService: DemoAiService = {
@@ -80,6 +83,6 @@ export const aiService: DemoAiService = {
       history: [],
     };
   },
-  transcribeAudio: notConfigured,
-  analyzeImage: notConfigured,
+  transcribeAudio: (request) => aiTranscribe(request),
+  analyzeImage: (request) => aiSuggestSpecies(request),
 };

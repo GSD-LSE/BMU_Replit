@@ -1,1 +1,2 @@
 - [Expo package maturity cutoff](expo-package-maturity.md) — if a newly published Expo SDK package is blocked as too recent, use a compatible mature patch rather than bypassing the guard.
+- [AI integration setup availability](ai-integration-setup.md) — verify managed AI provisioning tools exist in the current runtime; keep model routes fail-closed when they do not.

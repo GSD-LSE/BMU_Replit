@@ -31,6 +31,7 @@ import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollV
 import { useColors } from '@/hooks/useColors';
 import { makeDemoData } from '@/lib/demo-data';
 import { aiService } from '@/lib/ai-service';
+import type { SuggestSpeciesResponse } from '@workspace/api-client-react';
 import {
   BMU_NAME,
   catchItemValue,
@@ -84,13 +85,21 @@ const COPY = {
     saveDraft: 'Save draft for review', cancel: 'Cancel', remove: 'Remove', addPhoto: 'Add photo to catch',
     camera: 'Camera', upload: 'Upload', preparedPhoto: 'Use prepared demo image',
     preparedImageNote: 'Prepared example: suggested group is rabbitfish. Confirm or correct it.',
-    arbitraryPhotoNote: 'Image saved. No analysis is configured for arbitrary photos; enter details yourself.',
+    arbitraryPhotoNote: 'Photo is saved as source evidence. It cannot establish weight, price, vessel, or fishing location.',
     sampleVoice: 'Try sample voice report', sampleVoiceText: 'Demo Boat 01 landed 12 kilograms of rabbitfish at Demo Landing A. Price was 350 Kenyan shillings per kilogram.',
     seededError: 'Seeded demonstration error: the transcript says 12 kg, while the draft suggests 21 kg. Correct the draft before approval.',
-    realVoiceNote: 'Real recording is saved on this phone. Automatic transcription is not configured; listen and enter details manually.',
+    realVoiceNote: 'Recording stays on this phone. Optional server transcription is an unverified draft; check it against the audio.',
     startRecording: 'Start recording', stopRecording: 'Stop recording', playRecording: 'Replay voice note',
     deleteRecording: 'Delete voice note', transcript: 'Transcript · prepared example or your own notes',
     createVoiceDraft: 'Create draft from voice note', createPhotoDraft: 'Review photo and enter details',
+    transcribeAi: 'Transcribe with AI · unverified', transcribingAi: 'Transcribing securely…',
+    aiTranscriptReview: 'AI-generated draft text · check it against the recording.',
+    suggestSpeciesAi: 'Suggest fish group with AI', analyzingImageAi: 'Reviewing image securely…',
+    aiPhotoLabel: 'AI image suggestion · unverified', aiConfidence: 'Confidence',
+    useAiSuggestion: 'Copy suggestion into editable fields',
+    aiMediaNote: 'When enabled, this sends the selected media to the configured server-side model for an unverified suggestion.',
+    aiUnavailable: 'AI service unavailable. Your media remains on this phone; enter details manually.',
+    noClearSpecies: 'No clear fish identification. Leave it unknown or enter it after checking.',
     reviewQueue: 'Review queue', noPending: 'No records need review.', selectDraft: 'Choose a draft to review.',
     correctAndApprove: 'Check the source, complete missing fields, then approve.', source: 'Source',
     transcriptSource: 'Transcript', photoSource: 'Source photo', approval: 'Approve record',
@@ -141,13 +150,21 @@ const COPY = {
     saveDraft: 'Hifadhi rasimu ikaguliwe', cancel: 'Ghairi', remove: 'Ondoa', addPhoto: 'Ongeza picha',
     camera: 'Kamera', upload: 'Pakia', preparedPhoto: 'Tumia picha ya mfano',
     preparedImageNote: 'Mfano ulioandaliwa: kundi lililopendekezwa ni changu. Thibitisha au sahihisha.',
-    arbitraryPhotoNote: 'Picha imehifadhiwa. Hakuna uchambuzi wa picha za kawaida; jaza maelezo mwenyewe.',
+    arbitraryPhotoNote: 'Picha imehifadhiwa kama ushahidi. Haiwezi kuthibitisha uzito, bei, chombo au eneo la uvuvi.',
     sampleVoice: 'Jaribu mfano wa taarifa ya sauti', sampleVoiceText: 'Demo Boat 01 landed 12 kilograms of rabbitfish at Demo Landing A. Price was 350 Kenyan shillings per kilogram.',
     seededError: 'Hitilafu ya mfano: taarifa inasema kilo 12, lakini rasimu inapendekeza kilo 21. Sahihisha kabla ya kuidhinisha.',
-    realVoiceNote: 'Sauti imehifadhiwa kwenye simu hii. Unukuzi wa kiotomatiki haujaundwa; sikiliza kisha jaza maelezo.',
+    realVoiceNote: 'Sauti inabaki kwenye simu hii. Maandishi ya seva ni rasimu isiyothibitishwa; yakague kwa kusikiliza.',
     startRecording: 'Anza kurekodi', stopRecording: 'Simamisha kurekodi', playRecording: 'Sikiliza tena',
     deleteRecording: 'Futa sauti', transcript: 'Maandishi · mfano au maelezo yako',
     createVoiceDraft: 'Unda rasimu kutokana na sauti', createPhotoDraft: 'Kagua picha na uweke maelezo',
+    transcribeAi: 'Badilisha sauti kwa AI · haijathibitishwa', transcribingAi: 'Inabadilisha sauti kwa usalama…',
+    aiTranscriptReview: 'Maandishi ya AI · hakiki kwa kusikiliza sauti.',
+    suggestSpeciesAi: 'Pendekeza kundi la samaki kwa AI', analyzingImageAi: 'Inakagua picha kwa usalama…',
+    aiPhotoLabel: 'Pendekezo la picha la AI · halijathibitishwa', aiConfidence: 'Uhakika',
+    useAiSuggestion: 'Nakili pendekezo kwenye sehemu zinazoweza kuhaririwa',
+    aiMediaNote: 'Ikiwashwa, picha au sauti hutumwa kwa modeli ya seva kwa pendekezo lisilothibitishwa.',
+    aiUnavailable: 'Huduma ya AI haipatikani. Picha au sauti imehifadhiwa kwenye simu; jaza maelezo mwenyewe.',
+    noClearSpecies: 'Samaki hawezi kutambuliwa wazi. Acha bila kujulikana au jaza baada ya kukagua.',
     reviewQueue: 'Foleni ya ukaguzi', noPending: 'Hakuna rekodi zinazohitaji ukaguzi.', selectDraft: 'Chagua rasimu ya kukagua.',
     correctAndApprove: 'Kagua chanzo, jaza sehemu zinazokosekana, kisha uidhinishe.', source: 'Chanzo',
     transcriptSource: 'Maandishi ya sauti', photoSource: 'Picha ya chanzo', approval: 'Idhinisha rekodi',
@@ -685,8 +702,12 @@ export default function MoaiApp() {
   const [speciesFilter, setSpeciesFilter] = useState('');
   const [recordingUri, setRecordingUri] = useState('');
   const [voiceTranscript, setVoiceTranscript] = useState('');
+  const [voiceTranscriptIsAi, setVoiceTranscriptIsAi] = useState(false);
   const [recording, setRecording] = useState(false);
   const [photoDraftUri, setPhotoDraftUri] = useState('');
+  const [photoSuggestion, setPhotoSuggestion] = useState<SuggestSpeciesResponse | null>(null);
+  const [transcribing, setTranscribing] = useState(false);
+  const [analyzingPhoto, setAnalyzingPhoto] = useState(false);
   const [approvedRecentlyId, setApprovedRecentlyId] = useState('');
   const [resetConfirm, setResetConfirm] = useState(false);
   const [syncBusy, setSyncBusy] = useState(false);
@@ -804,8 +825,10 @@ export default function MoaiApp() {
     setForm(makeEmptyForm(data?.settings.site ?? DEMO_SITES[0]));
     setFormError('');
     setPhotoDraftUri('');
+      setPhotoSuggestion(null);
     setRecordingUri('');
     setVoiceTranscript('');
+      setVoiceTranscriptIsAi(false);
     setCaptureMode('choose');
     setPage('record');
   };
@@ -856,6 +879,7 @@ export default function MoaiApp() {
       source: 'voice',
       audioUri: recordingUri,
       transcript: voiceTranscript.trim(),
+      aiTranscription: voiceTranscriptIsAi,
       status: 'draft',
       syncStatus: 'waiting',
       createdAt: now,
@@ -890,7 +914,7 @@ export default function MoaiApp() {
       observation: '',
       source: 'photo',
       photoUri: photoDraftUri,
-      transcript: 'No automatic analysis is configured for this image. Enter all catch details manually.',
+      aiPhotoSuggestion: photoSuggestion ?? undefined,
       status: 'draft',
       syncStatus: 'waiting',
       createdAt: now,
@@ -912,6 +936,8 @@ export default function MoaiApp() {
       recorder.record();
       setRecording(true);
       setRecordingUri('');
+      setVoiceTranscript('');
+      setVoiceTranscriptIsAi(false);
     } catch (error) {
       showNotice(error instanceof Error ? `Could not start recording: ${error.message}` : 'Could not start recording.');
     }
@@ -927,12 +953,60 @@ export default function MoaiApp() {
         const durableUri = `${directory}moai-voice-${Date.now()}.${extension}`;
         await FileSystem.copyAsync({ from: sourceUri, to: durableUri });
         setRecordingUri(durableUri);
+        setVoiceTranscript('');
+        setVoiceTranscriptIsAi(false);
       } else {
         setRecordingUri(sourceUri);
       }
     } catch (error) {
       setRecording(false);
       showNotice(error instanceof Error ? `Could not save recording: ${error.message}` : 'Could not save recording.');
+    }
+  };
+  const transcribeVoice = async () => {
+    if (!recordingUri || transcribing) return;
+    setTranscribing(true);
+    try {
+      const extension = recordingUri.split('.').pop()?.split('?')[0]?.toLowerCase() || 'm4a';
+      const mimeType =
+        extension === 'wav' ? 'audio/wav' :
+        extension === 'mp3' ? 'audio/mpeg' :
+        extension === 'webm' ? 'audio/webm' : 'audio/mp4';
+      const audioBase64 = await FileSystem.readAsStringAsync(recordingUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      const result = await aiService.transcribeAudio({
+        audioBase64,
+        mimeType,
+        filename: `recording.${extension.replace(/[^a-z0-9]/g, '') || 'm4a'}`,
+      });
+      setVoiceTranscript(result.transcript);
+      setVoiceTranscriptIsAi(true);
+      showNotice('AI transcription added as an editable draft. Check it against the saved recording.');
+    } catch {
+      showNotice(t('aiUnavailable'));
+    } finally {
+      setTranscribing(false);
+    }
+  };
+  const analyzePhoto = async () => {
+    if (!photoDraftUri || analyzingPhoto) return;
+    setAnalyzingPhoto(true);
+    try {
+      const dataUri = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/s.exec(photoDraftUri);
+      const extension = photoDraftUri.split('.').pop()?.split('?')[0]?.toLowerCase() || '';
+      const mimeType = dataUri?.[1] ??
+        (extension === 'png' ? 'image/png' : extension === 'webp' ? 'image/webp' : 'image/jpeg');
+      const imageBase64 = dataUri?.[2] ?? await FileSystem.readAsStringAsync(photoDraftUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      const result = await aiService.analyzeImage({ imageBase64, mimeType });
+      setPhotoSuggestion(result);
+      showNotice('AI image suggestion added for review only. Confirm it against the photo.');
+    } catch {
+      showNotice(t('aiUnavailable'));
+    } finally {
+      setAnalyzingPhoto(false);
     }
   };
   const approveRecord = (record: LandingRecord) => {
@@ -1240,6 +1314,7 @@ export default function MoaiApp() {
                       if (recordingUri.startsWith('file://')) await FileSystem.deleteAsync(recordingUri, { idempotent: true });
                       setRecordingUri('');
                       setVoiceTranscript('');
+                      setVoiceTranscriptIsAi(false);
                     } catch (error) {
                       showNotice(error instanceof Error ? `Could not delete the voice note: ${error.message}` : 'Could not delete the voice note.');
                     }
@@ -1248,7 +1323,16 @@ export default function MoaiApp() {
               </View>
             ) : null}
           </Card>
-          <Input label={activeT('transcript')} value={voiceTranscript} onChangeText={setVoiceTranscript} multiline placeholder="No automatic transcription. Type any details you heard." />
+          <Action
+            label={transcribing ? activeT('transcribingAi') : activeT('transcribeAi')}
+            icon={transcribing ? 'loader' : 'zap'}
+            variant="outline"
+            disabled={!recordingUri || transcribing}
+            onPress={transcribeVoice}
+          />
+          {voiceTranscriptIsAi ? <Text style={[styles.helperText, paletteStyle(colors.warning)]}>{activeT('aiTranscriptReview')}</Text> : null}
+          <Input label={activeT('transcript')} value={voiceTranscript} onChangeText={setVoiceTranscript} multiline placeholder="No transcript yet. Type details manually or request a server transcription." />
+          <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>{activeT('aiMediaNote')}</Text>
           <Action label={activeT('createVoiceDraft')} icon="file-plus" variant="secondary" disabled={!recordingUri} onPress={saveRecordedVoiceDraft} />
           <View style={[styles.sampleBox, { backgroundColor: colors.paleWarning, borderColor: colors.sand }]}>
             <View style={styles.sampleBoxTitle}><Feather name="alert-triangle" size={17} color={colors.warning} /><Text style={[styles.sampleTitle, { color: colors.warning }]}>{activeT('seededError')}</Text></View>
@@ -1263,8 +1347,8 @@ export default function MoaiApp() {
           <Pressable onPress={() => setCaptureMode('choose')} style={styles.backRow}><Feather name="arrow-left" size={17} color={colors.primary} /><Text style={[styles.backText, { color: colors.primary }]}>{activeT('cancel')}</Text></Pressable>
           <Text style={[styles.screenLead, paletteStyle(colors.foreground)]}>{activeT('photoCatch')}</Text>
           <View style={styles.buttonRow}>
-            <View style={styles.flex}><Action label={activeT('camera')} icon="camera" onPress={() => choosePhoto('camera', setPhotoDraftUri)} /></View>
-            <View style={styles.flex}><Action label={activeT('upload')} icon="upload" variant="outline" onPress={() => choosePhoto('library', setPhotoDraftUri)} /></View>
+            <View style={styles.flex}><Action label={activeT('camera')} icon="camera" onPress={() => choosePhoto('camera', (uri) => { setPhotoDraftUri(uri); setPhotoSuggestion(null); })} /></View>
+            <View style={styles.flex}><Action label={activeT('upload')} icon="upload" variant="outline" onPress={() => choosePhoto('library', (uri) => { setPhotoDraftUri(uri); setPhotoSuggestion(null); })} /></View>
           </View>
           {photoDraftUri ? (
             <Card colors={colors}>
@@ -1272,6 +1356,28 @@ export default function MoaiApp() {
               <Text style={[styles.methodTitle, paletteStyle(colors.foreground)]}>{activeT('photoSource')}</Text>
               <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>{activeT('arbitraryPhotoNote')}</Text>
               <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>{activeT('photoNoInference')}</Text>
+              <Action
+                label={analyzingPhoto ? activeT('analyzingImageAi') : activeT('suggestSpeciesAi')}
+                icon={analyzingPhoto ? 'loader' : 'zap'}
+                variant="outline"
+                disabled={analyzingPhoto}
+                onPress={analyzePhoto}
+              />
+              <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>{activeT('aiMediaNote')}</Text>
+              {photoSuggestion ? (
+                <View style={[styles.warningBox, { backgroundColor: colors.paleWarning, borderColor: colors.sand }]}>
+                  <Feather name="alert-triangle" size={18} color={colors.warning} />
+                  <View style={styles.flex}>
+                    <Text style={[styles.warningText, { color: colors.warning }]}>{activeT('aiPhotoLabel')}</Text>
+                    <Text style={[styles.bodyText, paletteStyle(colors.foreground)]}>
+                      {[photoSuggestion.localName, photoSuggestion.speciesGroup].filter(Boolean).join(' · ') || activeT('noClearSpecies')}
+                    </Text>
+                    <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>
+                      {activeT('aiConfidence')}: {photoSuggestion.confidence} · {photoSuggestion.explanation}
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
               <Action label={activeT('createPhotoDraft')} icon="file-plus" onPress={savePhotoDraft} />
             </Card>
           ) : null}
@@ -1762,12 +1868,42 @@ function ReviewEditor({
           <View style={[styles.transcriptBox, { backgroundColor: colors.muted }]}>
             <Text style={[styles.factLabel, paletteStyle(colors.mutedForeground)]}>{t('transcriptSource')}</Text>
             <Text style={[styles.bodyText, paletteStyle(colors.foreground)]}>{record.transcript || 'No transcript provided. Enter details manually.'}</Text>
+            {record.aiTranscription ? <Text style={[styles.helperText, paletteStyle(colors.warning)]}>{t('aiTranscriptReview')}</Text> : null}
             {record.audioUri ? <Action label={t('playRecording')} icon="volume-2" variant="outline" onPress={() => onPlay(record.audioUri!)} /> : null}
             {!record.audioUri ? <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>Prepared text only · no audio recording attached.</Text> : null}
           </View>
         ) : null}
         {record.source === 'photo' && record.photoUri ? <Image source={imageSource(record.photoUri)} style={[styles.recordPhoto, { backgroundColor: colors.muted }]} resizeMode="cover" /> : null}
         {record.source === 'photo' ? <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>{record.photoUri === 'prepared-demo' ? t('preparedImageNote') : t('arbitraryPhotoNote')} {t('photoNoInference')}</Text> : null}
+        {record.aiPhotoSuggestion ? (
+          <View style={[styles.warningBox, { backgroundColor: colors.paleWarning, borderColor: colors.sand }]}>
+            <Feather name="alert-triangle" size={18} color={colors.warning} />
+            <View style={styles.flex}>
+              <Text style={[styles.warningText, { color: colors.warning }]}>{t('aiPhotoLabel')}</Text>
+              <Text style={[styles.bodyText, paletteStyle(colors.foreground)]}>
+                {[record.aiPhotoSuggestion.localName, record.aiPhotoSuggestion.speciesGroup].filter(Boolean).join(' · ') || t('noClearSpecies')}
+              </Text>
+              <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>
+                {t('aiConfidence')}: {record.aiPhotoSuggestion.confidence} · {record.aiPhotoSuggestion.explanation}
+              </Text>
+              <Action
+                label={t('useAiSuggestion')}
+                icon="edit-3"
+                variant="outline"
+                disabled={!record.aiPhotoSuggestion.localName && !record.aiPhotoSuggestion.speciesGroup}
+                onPress={() => {
+                  const suggestion = record.aiPhotoSuggestion!;
+                  const firstCatch = record.catchItems[0];
+                  if (!firstCatch) return;
+                  changeCatch(firstCatch.id, {
+                    localName: firstCatch.localName || suggestion.localName || '',
+                    speciesGroup: firstCatch.speciesGroup || suggestion.speciesGroup || '',
+                  });
+                }}
+              />
+            </View>
+          </View>
+        ) : null}
         <Input label={t('site')} value={record.site} onChangeText={(site) => onChange({ ...record, site })} />
         <Input label={t('dateTime')} value={localDateInput(record.landedAt)} onChangeText={(value) => onChange({ ...record, landedAt: parseLocalDateTime(value) ?? value })} placeholder="YYYY-MM-DDTHH:MM" />
         <Input label={t('vessel')} value={record.vessel} onChangeText={(vessel) => onChange({ ...record, vessel })} placeholder={t('missingInfo')} />

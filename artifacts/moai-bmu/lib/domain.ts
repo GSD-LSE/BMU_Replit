@@ -23,6 +23,13 @@ export type RecordHistoryEvent = {
   summary: string;
 };
 
+export type AiPhotoSuggestion = {
+  localName: string | null;
+  speciesGroup: string | null;
+  confidence: 'none' | 'low' | 'medium' | 'high';
+  explanation: string;
+};
+
 export type LandingRecord = {
   id: string;
   site: string;
@@ -38,6 +45,8 @@ export type LandingRecord = {
   source: CaptureSource;
   audioUri?: string;
   transcript?: string;
+  aiTranscription?: boolean;
+  aiPhotoSuggestion?: AiPhotoSuggestion;
   photoUri?: string;
   seededVoiceError?: boolean;
   status: LandingStatus;

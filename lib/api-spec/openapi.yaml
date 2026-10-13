@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: ai
+    description: Server-side draft analysis
 paths:
   /healthz:
     get:
@@ -24,6 +26,58 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /ai/transcribe:
+    post:
+      operationId: aiTranscribe
+      tags: [ai]
+      summary: Transcribe an audio recording for a draft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranscribeAudioRequest"
+      responses:
+        "200":
+          description: Unverified transcription suggestion
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscribeAudioResponse"
+        "400":
+          description: Invalid request
+        "413":
+          description: Media exceeds the supported limit
+        "503":
+          description: Server-side AI service is not configured
+        "502":
+          description: Transcription service failed
+  /ai/suggest-species:
+    post:
+      operationId: aiSuggestSpecies
+      tags: [ai]
+      summary: Suggest a possible fish group from an image
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SuggestSpeciesRequest"
+      responses:
+        "200":
+          description: Unverified species suggestion with uncertainty
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuggestSpeciesResponse"
+        "400":
+          description: Invalid request
+        "413":
+          description: Media exceeds the supported limit
+        "503":
+          description: Server-side AI service is not configured
+        "502":
+          description: Image suggestion service failed
 components:
   schemas:
     HealthStatus:
@@ -33,4 +87,41 @@ components:
           type: string
       required:
         - status
+    TranscribeAudioRequest:
+      type: object
+      properties:
+        audioBase64:
+          type: string
+        mimeType:
+          type: string
+        filename:
+          type: string
+      required: [audioBase64, mimeType, filename]
+    TranscribeAudioResponse:
+      type: object
+      properties:
+        transcript:
+          type: string
+      required: [transcript]
+    SuggestSpeciesRequest:
+      type: object
+      properties:
+        imageBase64:
+          type: string
+        mimeType:
+          type: string
+      required: [imageBase64, mimeType]
+    SuggestSpeciesResponse:
+      type: object
+      properties:
+        localName:
+          type: [string, "null"]
+        speciesGroup:
+          type: [string, "null"]
+        confidence:
+          type: string
+          enum: [none, low, medium, high]
+        explanation:
+          type: string
+      required: [localName, speciesGroup, confidence, explanation]
 

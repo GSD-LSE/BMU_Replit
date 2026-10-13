@@ -26,7 +26,8 @@ app.use(
   }),
 );
 app.use(cors());
-app.use(express.json());
+// Base64 media is sent over the server API, never directly to the model from the app.
+app.use(express.json({ limit: "35mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
