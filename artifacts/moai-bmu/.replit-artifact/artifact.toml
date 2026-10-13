@@ -1,0 +1,24 @@
+kind = "mobile"
+previewPath = "/moai-bmu/"
+title = "MOAI BMU"
+description = "A mobile-first field prototype for Beach Management Unit officials in coastal Kenya to record fish landings, review AI-assisted drafts, approve records, and view summaries using synthetic demo data."
+version = "1.0.0"
+id = "artifacts/moai-bmu"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/moai-bmu/" ]
+localPort = 20720
+
+[services.development]
+run = "pnpm --filter @workspace/moai-bmu run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/moai-bmu", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/moai-bmu", "run", "serve" ]
+
+[services.env]
+PORT = "20720"
+BASE_PATH = "/moai-bmu/"

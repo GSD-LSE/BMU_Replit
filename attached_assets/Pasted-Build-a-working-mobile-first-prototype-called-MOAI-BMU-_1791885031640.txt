@@ -1,0 +1,216 @@
+Build a working mobile-first prototype called “MOAI BMU” for a Beach Management Unit official in coastal Kenya.
+
+The official records fish landings, checks AI-assisted drafts, approves records and views useful summaries for their BMU. Prioritize this daily workflow. Make the app usable for field demonstrations on an Android phone.
+
+## Product scope
+
+Build these connected screens:
+
+1. Today
+2. Record a landing
+3. Review and approve
+4. My records
+5. BMU summary
+
+Use synthetic data throughout. Display a discreet “Prototype · Demo data” label. Do not build county dashboards, forecasting, payments, licensing, enforcement scoring or historical ledger digitisation in this version.
+
+Use a demo official assigned to one BMU and landing site. Allow switching between clearly labelled demo sites through settings.
+
+## Design
+
+Design for a busy landing site, bright sunlight and intermittent connectivity.
+
+- Large touch targets, readable text and strong contrast.
+- Short steps with clear progress and minimal typing.
+- Plain language and icons accompanied by text.
+- English and Swahili language options. Keep translation text easy to review and update.
+- Kilograms for weight, Kenyan shillings for prices and Africa/Nairobi for local time.
+- Show connection and sync status clearly.
+- Keep the main action, “Record a landing,” easy to reach.
+- Use a calm, practical design with a restrained coastal colour palette.
+
+## Today screen
+
+Show:
+
+- Official’s name, BMU and landing site.
+- Approved landings recorded today.
+- Records awaiting review.
+- Records saved on this device awaiting sync.
+- Recorded catch weight today.
+- A prominent “Record a landing” button.
+
+Distinguish saved, approved and synced states. Never imply that a locally saved record has reached another system.
+
+## Record a landing
+
+Offer three capture methods:
+
+### A. Enter details
+
+Provide a short guided form:
+
+- Landing site, prefilled from the official’s assignment.
+- Landing date and time, editable.
+- Vessel code or name.
+- Crew count, optional.
+- Gear type, optional.
+- Departure and return times, optional.
+- Broad fishing area, optional.
+- One or more catch items.
+
+Each catch item has:
+
+- Local fish name.
+- Species or species group, if known.
+- Weight in kg.
+- Weight basis: measured or estimated.
+- Price basis: KES per kg, total sale amount or unknown.
+- Price amount when known.
+- Optional photo.
+
+Model one landing with multiple catch items. Do not count each species line as a separate boat landing. Support mixed or unidentified catch without forcing a false species identification.
+
+Allow an optional observation, such as unusual catch or a market disruption. Keep it separate from measured catch data.
+
+### B. Record voice
+
+Let the official record, replay and delete a short voice note.
+
+Also provide a “Try sample voice report” button using this synthetic example:
+
+“Demo Boat 01 landed 12 kilograms of rabbitfish at Demo Landing A. Price was 350 Kenyan shillings per kilogram.”
+
+Show the transcript and proposed fields before approval.
+
+For the prepared demonstration, intentionally suggest 21 kg instead of 12 kg and highlight it for review. Label this as a seeded demonstration error, not a measured AI result.
+
+### C. Take or upload a photo
+
+Support camera capture and image upload.
+
+Show the image alongside suggested species or species groups. The official must confirm or correct the suggestion.
+
+Never infer weight, price, crew or fishing location from a fish photo.
+
+Include a prepared demonstration image and suggestions. For arbitrary uploaded images, retain the image and allow manual entry unless a real image-analysis service is configured.
+
+## AI behaviour
+
+The prototype must work without paid AI credentials.
+
+Provide clearly labelled prepared examples for demonstrating voice extraction and photo suggestions. Never present canned results as analysis of arbitrary user media.
+
+Structure AI processing behind a replaceable service interface so real transcription and image analysis can be added later. If real processing is configured, keep credentials on the server.
+
+AI creates drafts only. It must never approve records automatically.
+
+Do not invent missing values. Show “Unknown” or “Needs confirmation.” Avoid numeric confidence scores unless they come from an actual, documented source.
+
+## Review and approve
+
+Show the source audio, transcript or photo beside editable fields.
+
+Highlight uncertain or missing information. Let the official:
+
+- Correct values.
+- Add or remove catch items.
+- Replay audio or inspect the image.
+- Save a draft.
+- Reject a suggestion.
+- Approve the completed record.
+
+For demonstration validation, require landing site, landing date/time, vessel identifier, a local catch name or category and positive weight. These are configurable prototype rules, not claims about Kenya’s official reporting requirements.
+
+Allow unknown prices. Validate known prices against the selected price basis.
+
+Keep drafts separate from approved records. Approval should record the official and timestamp.
+
+After approval, show confirmation, sync status and a “Record another landing” action.
+
+## Records and corrections
+
+Provide filters for date, status and species.
+
+Each record should show its landing details, catch items, source media and history.
+
+Allow amendments to approved records with a reason. Preserve the previous values and record who changed them and when.
+
+Use separate record IDs and sync status. Retrying a sync must not create duplicate landings.
+
+## Offline behaviour
+
+Use persistent browser storage, preferably IndexedDB, for drafts, records and captured media.
+
+After the app has loaded once:
+
+- Allow capture, editing and local approval without connectivity.
+- Preserve records after refresh.
+- Queue uploads and server-dependent processing until connectivity returns.
+- Show “Saved on this phone,” “Waiting to sync” and “Synced” accurately.
+- Keep source media until upload is acknowledged.
+- Make sync failures recoverable without losing data.
+
+Include a clearly labelled demo connectivity toggle. Distinguish simulated connectivity from actual network availability.
+
+If server sync is simulated, explicitly label it. Do not claim real multi-device sync.
+
+## BMU summary
+
+Show a simple daily and weekly summary based only on approved records:
+
+- Recorded landings.
+- Recorded catch weight.
+- Weight by species or local category.
+- Observed prices where available.
+- Recorded sale value where calculable.
+- Records with missing prices.
+- Pending reviews and unsynced records.
+
+Calculate value consistently: weight × price per kg, or the entered total sale amount. Never treat missing prices as zero.
+
+Explain that these are summaries of captured records, not estimates of the entire fishery.
+
+Do not claim stock depletion, predict catches or recommend fishing grounds from these records.
+
+Include a simple CSV download. Label it “Prototype export.” Do not claim compatibility with Kobo or national FIMS until their actual schemas and requirements have been confirmed.
+
+## Demo data and walkthrough
+
+Seed approximately 20 synthetic landings across a week, including:
+
+- A landing with multiple catch items.
+- An unknown species group.
+- A missing price.
+- A total sale price.
+- An estimated weight.
+- A record awaiting review.
+- An approved record awaiting sync.
+- A corrected approved record.
+
+Include a “Reset demo” action.
+
+Make this walkthrough work end to end:
+
+Record sample voice report → inspect draft → correct 21 kg to 12 kg → approve → view history → see the BMU summary update.
+
+The corrected example must contribute 12 kg and KES 4,200 to the summary, and count as one landing.
+
+## Implementation and verification
+
+Choose a simple stack that runs reliably in Replit. Build working interactions and persistence, not just visual screens.
+
+Keep record storage, AI processing and sync logic separate so each can be replaced later.
+
+Verify:
+
+- Drafts survive refresh.
+- Offline capture preserves entered data.
+- AI suggestions require human approval.
+- Drafts are excluded from summaries.
+- Multiple catch items count as one landing.
+- Unknown prices are handled correctly.
+- Amendments preserve history.
+- Sync retries do not duplicate records.
+
+Finish with a short README explaining how to run the prototype, the demo walkthrough, which capabilities are real or simulated, and the limitations before field use.

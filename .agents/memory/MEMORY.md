@@ -1,0 +1,1 @@
+- [Expo package maturity cutoff](expo-package-maturity.md) — if a newly published Expo SDK package is blocked as too recent, use a compatible mature patch rather than bypassing the guard.
