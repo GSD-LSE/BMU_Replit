@@ -66,7 +66,7 @@ const COPY = {
   en: {
     today: 'Home', record: 'Record', review: 'Review', records: 'Notes', summary: 'Overview',
     settings: 'Settings', demo: 'Prototype · Demo data', official: 'BMU official',
-    todayIntro: 'A clear picture of today’s landings.', captureIntro: 'Start with a photo or a voice note. Your notes are saved on this phone.',
+    todayIntro: 'A clear picture of today’s landings.', captureIntro: 'Record what each boat brought in using a voice note, photo, or details.',
     approvedToday: 'Approved today',
     awaitingReview: 'Awaiting review', waitingSync: 'Waiting to sync', catchWeight: 'Catch recorded today',
     recordLanding: 'Record a landing', quickTip: 'Record one boat landing with one or more catch items.',
@@ -74,7 +74,7 @@ const COPY = {
     unknown: 'Unknown', savedPhone: 'Saved on this phone', syncWaiting: 'Waiting to sync',
     syncedDemo: 'Synced · demo only', locallySaved: 'Saved locally', saving: 'Saving locally…',
     saveError: 'Local save needs attention', recordMethod: 'How would you like to record?',
-    enterDetails: 'Enter details', voiceReport: 'Record voice', photoCatch: 'Take or upload a photo',
+    enterDetails: 'Enter details', voiceReport: 'Record a voice note', photoCatch: 'Take or upload a photo',
     shortForm: 'Short guided form', voiceNote: 'Short voice note', photoNote: 'Photo and manual details',
     site: 'Landing site', dateTime: 'Landing date and time · EAT', vessel: 'Vessel code or name',
     fisher: 'Fisherman · optional', boatSize: 'Boat size or type · optional',
@@ -123,6 +123,7 @@ const COPY = {
     pendingList: 'Saved records waiting for review', missingInfo: 'Needs confirmation', noSummary: 'No approved records for this site yet.',
     unknownSpecies: 'Unknown species group', amountUnknown: 'Price not recorded', approveValidation: 'Please complete the required fields before approval.',
     notesToday: 'Notes today', recentNotes: 'Recent notes', viewAllNotes: 'View all notes', noNotesToday: 'No notes saved today yet.',
+    reviewEditNotes: 'Review and edit notes', reviewEditHint: 'Open saved notes to make corrections or continue a draft.',
     yesterday: 'Yesterday', extractedSummary: 'Extracted summary · check and correct', detailedNotes: 'Detailed notes and source',
     byFisher: 'Catch by fisherman', byLandingSite: 'Catch by landing site', byBoatSize: 'Catch by boat size or type',
     overallCatch: 'Approved catch · all landing sites', notRecorded: 'Not recorded',
@@ -137,7 +138,7 @@ const COPY = {
   sw: {
     today: 'Nyumbani', record: 'Rekodi', review: 'Kagua', records: 'Vidokezo', summary: 'Muhtasari',
     settings: 'Mipangilio', demo: 'Mfano · Data ya majaribio', official: 'Afisa wa BMU',
-    todayIntro: 'Muhtasari wa wazi wa shughuli za leo.', captureIntro: 'Anza kwa picha au ujumbe wa sauti. Vidokezo huhifadhiwa kwenye simu hii.',
+    todayIntro: 'Muhtasari wa wazi wa shughuli za leo.', captureIntro: 'Rekodi samaki walioletwa kwa ujumbe wa sauti, picha au maelezo.',
     approvedToday: 'Zilizoidhinishwa leo',
     awaitingReview: 'Zinasubiri ukaguzi', waitingSync: 'Zinasubiri kusawazishwa', catchWeight: 'Uzito wa samaki leo',
     recordLanding: 'Rekodi upakuaji', quickTip: 'Rekodi mashua moja yenye aina moja au zaidi za samaki.',
@@ -145,7 +146,7 @@ const COPY = {
     unknown: 'Haijulikani', savedPhone: 'Imehifadhiwa kwenye simu hii', syncWaiting: 'Inasubiri kusawazishwa',
     syncedDemo: 'Imesawazishwa · mfano tu', locallySaved: 'Imehifadhiwa ndani ya simu', saving: 'Inahifadhiwa…',
     saveError: 'Hifadhi ya ndani inahitaji kuangaliwa', recordMethod: 'Ungependa kurekodi kwa njia gani?',
-    enterDetails: 'Ingiza maelezo', voiceReport: 'Rekodi sauti', photoCatch: 'Piga au pakia picha',
+    enterDetails: 'Ingiza maelezo', voiceReport: 'Rekodi ujumbe wa sauti', photoCatch: 'Piga au pakia picha',
     shortForm: 'Fomu fupi ya hatua', voiceNote: 'Ujumbe mfupi wa sauti', photoNote: 'Picha na maelezo ya mkono',
     site: 'Eneo la kutua', dateTime: 'Tarehe na saa ya kutua · EAT', vessel: 'Namba au jina la chombo',
     fisher: 'Mvuvi · hiari', boatSize: 'Ukubwa au aina ya mashua · hiari',
@@ -194,6 +195,7 @@ const COPY = {
     pendingList: 'Rekodi zilizohifadhiwa zikisubiri ukaguzi', missingInfo: 'Inahitaji uthibitisho', noSummary: 'Bado hakuna rekodi zilizoidhinishwa kwa eneo hili.',
     unknownSpecies: 'Kundi la spishi halijulikani', amountUnknown: 'Bei haikurekodiwa', approveValidation: 'Jaza sehemu zinazohitajika kabla ya kuidhinisha.',
     notesToday: 'Vidokezo vya leo', recentNotes: 'Vidokezo vya hivi karibuni', viewAllNotes: 'Tazama vidokezo vyote', noNotesToday: 'Bado hakuna vidokezo vilivyohifadhiwa leo.',
+    reviewEditNotes: 'Kagua na urekebishe vidokezo', reviewEditHint: 'Fungua vidokezo vilivyohifadhiwa ili kurekebisha au kuendelea na rasimu.',
     yesterday: 'Jana', extractedSummary: 'Muhtasari uliotolewa · kagua na urekebishe', detailedNotes: 'Maelezo na chanzo',
     byFisher: 'Samaki kwa mvuvi', byLandingSite: 'Samaki kwa eneo la kutua', byBoatSize: 'Samaki kwa ukubwa au aina ya mashua',
     overallCatch: 'Samaki walioidhinishwa · maeneo yote', notRecorded: 'Haikurekodiwa',
@@ -1171,98 +1173,80 @@ export default function MoaiApp() {
   };
   const contentTop = Platform.OS === 'web' ? Math.max(67, insets.top) : insets.top + 8;
 
-  const renderToday = () => {
-    const todayNotes = siteRecords
-      .filter((record) => nairobiDayKey(record.landedAt) === todayKey)
-      .sort((a, b) => new Date(b.landedAt).getTime() - new Date(a.landedAt).getTime());
-    const homeNotes = todayNotes.length
-      ? todayNotes.slice(0, 2)
-      : [...siteRecords].sort((a, b) => new Date(b.landedAt).getTime() - new Date(a.landedAt).getTime()).slice(0, 2);
-
-    return (
-      <View style={styles.stack}>
-        <View style={[styles.homeWelcome, { backgroundColor: colors.deepSea }]}>
-          <Text style={[styles.heroKicker, { color: colors.seaGlass }]}>{BMU_NAME.toUpperCase()}</Text>
-          <Text style={[styles.heroName, { color: colors.primaryForeground }]}>{OFFICIAL_NAME}</Text>
-          <Text style={[styles.heroSubtitle, { color: colors.seaGlass }]}>{data.settings.site.replace(' · Kilifi BMU', '')}</Text>
-          <View style={styles.homeWelcomeFooter}>
-            <View style={[styles.heroDemoLabel, { backgroundColor: colors.seaGlass }]}>
-              <View style={[styles.statusDot, { backgroundColor: colors.success }]} />
-              <Text style={[styles.heroDemoText, { color: colors.deepSea }]}>{activeT('demo')}</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.homeCaptureIntro}>
-          <Text style={[styles.cardTitle, paletteStyle(colors.foreground)]}>{activeT('recordLanding')}</Text>
-          <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>{activeT('captureIntro')}</Text>
-        </View>
-        <View style={styles.captureGrid}>
-          <Pressable
-            onPress={() => beginRecord('photo')}
-            testID="record-photo"
-            accessibilityRole="button"
-            accessibilityLabel={activeT('photoCatch')}
-            style={({ pressed }) => [styles.captureAction, { backgroundColor: colors.deepSea, opacity: pressed ? 0.84 : 1 }]}
-          >
-            <View style={[styles.captureIcon, { backgroundColor: colors.seaGlass }]}>
-              <Feather name="camera" size={23} color={colors.deepSea} />
-            </View>
-            <View>
-              <Text style={[styles.captureTitle, { color: colors.primaryForeground }]}>{activeT('photoCatch')}</Text>
-              <Text style={[styles.captureHint, { color: colors.seaGlass }]}>{activeT('photoNote')}</Text>
-            </View>
-          </Pressable>
-          <Pressable
-            onPress={() => beginRecord('voice')}
-            testID="record-voice"
-            accessibilityRole="button"
-            accessibilityLabel={activeT('voiceReport')}
-            style={({ pressed }) => [styles.captureAction, { backgroundColor: colors.primary, opacity: pressed ? 0.84 : 1 }]}
-          >
-            <View style={[styles.captureIcon, { backgroundColor: colors.card }]}>
-              <Feather name="mic" size={23} color={colors.primary} />
-            </View>
-            <View>
-              <Text style={[styles.captureTitle, { color: colors.primaryForeground }]}>{activeT('voiceReport')}</Text>
-              <Text style={[styles.captureHint, { color: colors.seaGlass }]}>{activeT('voiceNote')}</Text>
-            </View>
-          </Pressable>
-        </View>
-        <Pressable onPress={() => beginRecord('details')} testID="record-manual" accessibilityRole="button" style={styles.manualCaptureLink}>
-          <Feather name="edit-3" size={16} color={colors.primary} />
-          <Text style={[styles.manualCaptureText, { color: colors.primary }]}>{activeT('enterDetails')}</Text>
-          <Feather name="arrow-right" size={16} color={colors.primary} />
-        </Pressable>
-
-        <View style={styles.homeNotesHeading}>
-          <View style={styles.flex}>
-            <SectionTitle title={todayNotes.length ? activeT('notesToday') : activeT('recentNotes')} aside={todayNotes.length ? String(todayNotes.length) : undefined} />
-          </View>
-          <Pressable onPress={() => { setSelectedId(''); setPage('records'); }} accessibilityRole="button" style={styles.viewAllNotes}>
-            <Text style={[styles.viewAllNotesText, { color: colors.primary }]}>{activeT('viewAllNotes')}</Text>
-            <Feather name="arrow-right" size={15} color={colors.primary} />
-          </Pressable>
-        </View>
-        {homeNotes.length ? homeNotes.map((record) => (
-          <AppRecordCard
-            key={record.id}
-            record={record}
-            language={language}
-            onPress={() => {
-              setSelectedId(record.id);
-              setPage(record.status === 'draft' ? 'review' : 'records');
-            }}
-          />
-        )) : (
-          <Card colors={colors}>
-            <Text style={[styles.bodyText, paletteStyle(colors.mutedForeground)]}>{activeT('noNotesToday')}</Text>
-          </Card>
-        )}
-        {storageError ? <Text style={[styles.storageError, { color: colors.destructive }]}>{activeT('saveError')}: {storageError}</Text> : null}
+  const renderToday = () => (
+    <View style={styles.stack}>
+      <View style={styles.homeCaptureIntro}>
+        <Text style={[styles.homeTitle, paletteStyle(colors.foreground)]}>{activeT('recordLanding')}</Text>
+        <Text style={[styles.homeDescription, paletteStyle(colors.mutedForeground)]}>{activeT('captureIntro')}</Text>
       </View>
-    );
-  };
+
+      <Pressable
+        onPress={() => beginRecord('voice')}
+        testID="record-voice"
+        accessibilityRole="button"
+        accessibilityLabel={activeT('voiceReport')}
+        style={({ pressed }) => [styles.homePrimaryAction, { backgroundColor: colors.deepSea, opacity: pressed ? 0.86 : 1 }]}
+      >
+        <View style={[styles.homePrimaryIcon, { backgroundColor: colors.seaGlass }]}>
+          <Feather name="mic" size={25} color={colors.deepSea} />
+        </View>
+        <View style={styles.flex}>
+          <Text style={[styles.homePrimaryTitle, { color: colors.primaryForeground }]}>{activeT('voiceReport')}</Text>
+          <Text style={[styles.homePrimaryHint, { color: colors.seaGlass }]}>{activeT('voiceNote')}</Text>
+        </View>
+        <Feather name="arrow-up-right" size={20} color={colors.seaGlass} />
+      </Pressable>
+
+      <View style={styles.captureGrid}>
+        <Pressable
+          onPress={() => beginRecord('photo')}
+          testID="record-photo"
+          accessibilityRole="button"
+          accessibilityLabel={activeT('photoCatch')}
+          style={({ pressed }) => [styles.captureAction, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.84 : 1 }]}
+        >
+          <View style={[styles.captureIcon, { backgroundColor: colors.seaGlass }]}>
+            <Feather name="camera" size={21} color={colors.deepSea} />
+          </View>
+          <View>
+            <Text style={[styles.captureTitle, paletteStyle(colors.foreground)]}>{activeT('photoCatch')}</Text>
+            <Text style={[styles.captureHint, paletteStyle(colors.mutedForeground)]}>{activeT('photoNote')}</Text>
+          </View>
+        </Pressable>
+        <Pressable
+          onPress={() => beginRecord('details')}
+          testID="record-manual"
+          accessibilityRole="button"
+          accessibilityLabel={activeT('enterDetails')}
+          style={({ pressed }) => [styles.captureAction, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.84 : 1 }]}
+        >
+          <View style={[styles.captureIcon, { backgroundColor: colors.seaGlass }]}>
+            <Feather name="edit-3" size={21} color={colors.deepSea} />
+          </View>
+          <View>
+            <Text style={[styles.captureTitle, paletteStyle(colors.foreground)]}>{activeT('enterDetails')}</Text>
+            <Text style={[styles.captureHint, paletteStyle(colors.mutedForeground)]}>{activeT('shortForm')}</Text>
+          </View>
+        </Pressable>
+      </View>
+
+      <Pressable
+        onPress={() => { setSelectedId(''); setPage('records'); }}
+        testID="open-notes"
+        accessibilityRole="button"
+        style={({ pressed }) => [styles.homeNotesAction, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.86 : 1 }]}
+      >
+        <View style={[styles.captureIcon, { backgroundColor: colors.seaGlass }]}>
+          <Feather name="file-text" size={19} color={colors.deepSea} />
+        </View>
+        <View style={styles.flex}>
+          <Text style={[styles.homeNotesTitle, paletteStyle(colors.foreground)]}>{activeT('reviewEditNotes')}</Text>
+          <Text style={[styles.captureHint, paletteStyle(colors.mutedForeground)]}>{activeT('reviewEditHint')}</Text>
+        </View>
+        <Feather name="chevron-right" size={19} color={colors.primary} />
+      </Pressable>
+    </View>
+  );
 
   const renderRecord = () => (
     <View style={styles.stack}>
@@ -1891,10 +1875,12 @@ export default function MoaiApp() {
           </View>
         </View>
         <View style={styles.topBarRight}>
-          <View style={[styles.localStatus, { backgroundColor: localSaved ? colors.seaGlass : colors.paleWarning }]}>
-            <View style={[styles.statusDot, { backgroundColor: localSaved ? colors.success : colors.warning }]} />
-            <Text style={[styles.localStatusText, { color: localSaved ? colors.success : colors.warning }]}>{localSaved ? activeT('savedPhone') : activeT('saving')}</Text>
-          </View>
+          {page !== 'today' ? (
+            <View style={[styles.localStatus, { backgroundColor: localSaved ? colors.seaGlass : colors.paleWarning }]}>
+              <View style={[styles.statusDot, { backgroundColor: localSaved ? colors.success : colors.warning }]} />
+              <Text style={[styles.localStatusText, { color: localSaved ? colors.success : colors.warning }]}>{localSaved ? activeT('savedPhone') : activeT('saving')}</Text>
+            </View>
+          ) : null}
           <Pressable onPress={() => setPage('settings')} accessibilityRole="button" accessibilityLabel={activeT('settings')} style={[styles.headerSettings, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Feather name="settings" size={19} color={colors.foreground} />
           </Pressable>
@@ -2087,19 +2073,20 @@ const styles = StyleSheet.create({
   pageContent: { paddingHorizontal: 16, paddingTop: 5, gap: 16 },
   stack: { gap: 15 },
   stackTight: { gap: 9 },
-  homeWelcome: { borderRadius: 22, padding: 20, overflow: 'hidden', gap: 3 },
-  homeWelcomeFooter: { flexDirection: 'row', alignItems: 'center', marginTop: 13 },
-  homeCaptureIntro: { gap: 5, marginTop: 1 },
+  homeCaptureIntro: { gap: 6, marginTop: 5, marginBottom: 1 },
+  homeTitle: { fontSize: 25, lineHeight: 31, fontWeight: '800' },
+  homeDescription: { fontSize: 14, lineHeight: 20 },
+  homePrimaryAction: { minHeight: 106, borderRadius: 20, padding: 17, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  homePrimaryIcon: { width: 52, height: 52, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  homePrimaryTitle: { fontSize: 17, lineHeight: 22, fontWeight: '800' },
+  homePrimaryHint: { fontSize: 12, lineHeight: 17, marginTop: 4 },
   captureGrid: { flexDirection: 'row', gap: 12 },
-  captureAction: { flex: 1, minHeight: 144, borderRadius: 20, padding: 15, justifyContent: 'space-between' },
+  captureAction: { flex: 1, minHeight: 120, borderRadius: 18, borderWidth: 1, padding: 13, justifyContent: 'space-between' },
   captureIcon: { width: 46, height: 46, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   captureTitle: { fontSize: 14, lineHeight: 19, fontWeight: '800' },
   captureHint: { fontSize: 11, lineHeight: 15, marginTop: 3 },
-  manualCaptureLink: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
-  manualCaptureText: { fontSize: 13, fontWeight: '700' },
-  homeNotesHeading: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 5 },
-  viewAllNotes: { minHeight: 38, flexDirection: 'row', alignItems: 'center', gap: 5 },
-  viewAllNotesText: { fontSize: 12, fontWeight: '700' },
+  homeNotesAction: { minHeight: 82, borderRadius: 18, borderWidth: 1, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 11 },
+  homeNotesTitle: { fontSize: 13, lineHeight: 18, fontWeight: '800' },
   heroBlock: { borderRadius: 22, padding: 20, overflow: 'hidden' },
   heroKicker: { fontSize: 10, letterSpacing: 1.6, fontWeight: '800' },
   heroName: { fontSize: 27, lineHeight: 34, fontWeight: '800', marginTop: 7 },
