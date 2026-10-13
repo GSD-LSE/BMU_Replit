@@ -64,9 +64,10 @@ type Palette = ReturnType<typeof useColors>;
 
 const COPY = {
   en: {
-    today: 'Today', record: 'Record', review: 'Review', records: 'My records', summary: 'BMU summary',
+    today: 'Home', record: 'Record', review: 'Review', records: 'Notes', summary: 'Overview',
     settings: 'Settings', demo: 'Prototype · Demo data', official: 'BMU official',
-    todayIntro: 'A clear picture of today’s landings.', approvedToday: 'Approved today',
+    todayIntro: 'A clear picture of today’s landings.', captureIntro: 'Start with a photo or a voice note. Your notes are saved on this phone.',
+    approvedToday: 'Approved today',
     awaitingReview: 'Awaiting review', waitingSync: 'Waiting to sync', catchWeight: 'Catch recorded today',
     recordLanding: 'Record a landing', quickTip: 'Record one boat landing with one or more catch items.',
     actualNetwork: 'Device internet', demoSync: 'Demo sync', available: 'Available', unavailable: 'Unavailable',
@@ -76,6 +77,7 @@ const COPY = {
     enterDetails: 'Enter details', voiceReport: 'Record voice', photoCatch: 'Take or upload a photo',
     shortForm: 'Short guided form', voiceNote: 'Short voice note', photoNote: 'Photo and manual details',
     site: 'Landing site', dateTime: 'Landing date and time · EAT', vessel: 'Vessel code or name',
+    fisher: 'Fisherman · optional', boatSize: 'Boat size or type · optional',
     crew: 'Crew count · optional', gear: 'Gear type · optional', departure: 'Departure time · optional',
     returnTime: 'Return time · optional', area: 'Broad fishing area · optional', catchItems: 'Catch items',
     localName: 'Local fish name', species: 'Species or group · if known', weight: 'Weight · kg',
@@ -112,7 +114,7 @@ const COPY = {
     amendmentSaved: 'Amendment saved. Previous values remain in the history.',
     day: 'Today', week: 'Last 7 days', landings: 'Recorded landings', weightLabel: 'Recorded catch weight',
     valueLabel: 'Recorded sale value', pricesObserved: 'Observed prices', missingPrices: 'Records with missing prices',
-    bySpecies: 'Recorded weight by local category', last7Days: 'Last 7 days', unitPrices: 'Observed prices per kg', totalSaleObservations: 'Catch items reported with total sale amounts', priceNote: 'Average of captured per-kg prices only; not a market price.', summaryNote: 'Summaries include approved captured records only. They are not estimates of the entire fishery.',
+    bySpecies: 'Recorded weight by local category', last7Days: 'Last 7 days', unitPrices: 'Observed prices per kg', totalSaleObservations: 'Catch items reported with total sale amounts', priceNote: 'Average of captured per-kg prices only; not a market price.', summaryNote: 'Summaries include approved records saved in this prototype only. They are not estimates of the entire fishery.',
     prototypeExport: 'Prototype export', exportCsv: 'Download CSV', exportDone: 'Prototype CSV export created.',
     language: 'Language', english: 'English', swahili: 'Kiswahili', assignedSite: 'Assigned demo site',
     connectivity: 'Demo connectivity', resetDemo: 'Reset demo data', resetConfirm: 'Reset all records and settings to the original demo?',
@@ -120,6 +122,10 @@ const COPY = {
     profile: 'Demo official', deviceStatus: 'Device and sync status', localOnlyInfo: 'Your records stay on this phone. The sync control only demonstrates a possible future server flow.',
     pendingList: 'Saved records waiting for review', missingInfo: 'Needs confirmation', noSummary: 'No approved records for this site yet.',
     unknownSpecies: 'Unknown species group', amountUnknown: 'Price not recorded', approveValidation: 'Please complete the required fields before approval.',
+    notesToday: 'Notes today', recentNotes: 'Recent notes', viewAllNotes: 'View all notes', noNotesToday: 'No notes saved today yet.',
+    yesterday: 'Yesterday', extractedSummary: 'Extracted summary · check and correct', detailedNotes: 'Detailed notes and source',
+    byFisher: 'Catch by fisherman', byLandingSite: 'Catch by landing site', byBoatSize: 'Catch by boat size or type',
+    overallCatch: 'Approved catch · all landing sites', notRecorded: 'Not recorded',
     voiceErrorGate: 'Review the seeded 21 kg demo error. The transcript states 12 kg.',
     onlineSim: 'On · simulated', offlineSim: 'Off · local queue only', deviceUnknown: 'Checking…',
     photoSuggestion: 'Prepared suggestion', none: 'None', noObservation: 'No observation recorded.',
@@ -129,9 +135,10 @@ const COPY = {
     photoNoInference: 'A fish photo never supplies weight, price, crew, or fishing location.',
   },
   sw: {
-    today: 'Leo', record: 'Rekodi', review: 'Kagua', records: 'Rekodi zangu', summary: 'Muhtasari wa BMU',
+    today: 'Nyumbani', record: 'Rekodi', review: 'Kagua', records: 'Vidokezo', summary: 'Muhtasari',
     settings: 'Mipangilio', demo: 'Mfano · Data ya majaribio', official: 'Afisa wa BMU',
-    todayIntro: 'Muhtasari wa wazi wa shughuli za leo.', approvedToday: 'Zilizoidhinishwa leo',
+    todayIntro: 'Muhtasari wa wazi wa shughuli za leo.', captureIntro: 'Anza kwa picha au ujumbe wa sauti. Vidokezo huhifadhiwa kwenye simu hii.',
+    approvedToday: 'Zilizoidhinishwa leo',
     awaitingReview: 'Zinasubiri ukaguzi', waitingSync: 'Zinasubiri kusawazishwa', catchWeight: 'Uzito wa samaki leo',
     recordLanding: 'Rekodi upakuaji', quickTip: 'Rekodi mashua moja yenye aina moja au zaidi za samaki.',
     actualNetwork: 'Intaneti ya kifaa', demoSync: 'Usawazishaji wa mfano', available: 'Inapatikana', unavailable: 'Haipatikani',
@@ -141,6 +148,7 @@ const COPY = {
     enterDetails: 'Ingiza maelezo', voiceReport: 'Rekodi sauti', photoCatch: 'Piga au pakia picha',
     shortForm: 'Fomu fupi ya hatua', voiceNote: 'Ujumbe mfupi wa sauti', photoNote: 'Picha na maelezo ya mkono',
     site: 'Eneo la kutua', dateTime: 'Tarehe na saa ya kutua · EAT', vessel: 'Namba au jina la chombo',
+    fisher: 'Mvuvi · hiari', boatSize: 'Ukubwa au aina ya mashua · hiari',
     crew: 'Idadi ya wafanyakazi · hiari', gear: 'Aina ya zana · hiari', departure: 'Muda wa kuondoka · hiari',
     returnTime: 'Muda wa kurudi · hiari', area: 'Eneo pana la uvuvi · hiari', catchItems: 'Aina za samaki',
     localName: 'Jina la samaki la eneo', species: 'Spishi au kundi · ikijulikana', weight: 'Uzito · kg',
@@ -177,7 +185,7 @@ const COPY = {
     amendmentSaved: 'Marekebisho yamehifadhiwa. Maelezo ya awali bado yako kwenye historia.',
     day: 'Leo', week: 'Siku 7 zilizopita', landings: 'Idadi ya upakuaji', weightLabel: 'Uzito wa samaki',
     valueLabel: 'Thamani ya mauzo iliyorekodiwa', pricesObserved: 'Bei zilizorekodiwa', missingPrices: 'Rekodi zisizo na bei kamili',
-    bySpecies: 'Uzito kwa kundi la eneo', last7Days: 'Siku 7 zilizopita', unitPrices: 'Bei zilizoripotiwa kwa kilo', totalSaleObservations: 'Aina zenye jumla ya mauzo iliyorekodiwa', priceNote: 'Wastani wa bei zilizorekodiwa kwa kilo pekee; si bei ya soko.', summaryNote: 'Muhtasari hutumia rekodi zilizoidhinishwa pekee. Si makadirio ya uvuvi wote.',
+    bySpecies: 'Uzito kwa kundi la eneo', last7Days: 'Siku 7 zilizopita', unitPrices: 'Bei zilizoripotiwa kwa kilo', totalSaleObservations: 'Aina zenye jumla ya mauzo iliyorekodiwa', priceNote: 'Wastani wa bei zilizorekodiwa kwa kilo pekee; si bei ya soko.', summaryNote: 'Muhtasari hutumia rekodi zilizoidhinishwa kwenye mfano huu pekee. Si makadirio ya uvuvi wote.',
     prototypeExport: 'Uhamishaji wa mfano', exportCsv: 'Pakua CSV', exportDone: 'CSV ya mfano imetayarishwa.',
     language: 'Lugha', english: 'English', swahili: 'Kiswahili', assignedSite: 'Eneo la mfano ulilogawiwa',
     connectivity: 'Muunganisho wa mfano', resetDemo: 'Weka upya data ya mfano', resetConfirm: 'Weka upya rekodi na mipangilio yote?',
@@ -185,6 +193,10 @@ const COPY = {
     profile: 'Afisa wa mfano', deviceStatus: 'Hali ya kifaa na usawazishaji', localOnlyInfo: 'Rekodi hubaki kwenye simu hii. Udhibiti unaonyesha tu jinsi seva ya baadaye inavyoweza kufanya kazi.',
     pendingList: 'Rekodi zilizohifadhiwa zikisubiri ukaguzi', missingInfo: 'Inahitaji uthibitisho', noSummary: 'Bado hakuna rekodi zilizoidhinishwa kwa eneo hili.',
     unknownSpecies: 'Kundi la spishi halijulikani', amountUnknown: 'Bei haikurekodiwa', approveValidation: 'Jaza sehemu zinazohitajika kabla ya kuidhinisha.',
+    notesToday: 'Vidokezo vya leo', recentNotes: 'Vidokezo vya hivi karibuni', viewAllNotes: 'Tazama vidokezo vyote', noNotesToday: 'Bado hakuna vidokezo vilivyohifadhiwa leo.',
+    yesterday: 'Jana', extractedSummary: 'Muhtasari uliotolewa · kagua na urekebishe', detailedNotes: 'Maelezo na chanzo',
+    byFisher: 'Samaki kwa mvuvi', byLandingSite: 'Samaki kwa eneo la kutua', byBoatSize: 'Samaki kwa ukubwa au aina ya mashua',
+    overallCatch: 'Samaki walioidhinishwa · maeneo yote', notRecorded: 'Haikurekodiwa',
     voiceErrorGate: 'Kagua hitilafu ya mfano ya kilo 21. Maandishi yanasema kilo 12.',
     onlineSim: 'Washa · mfano', offlineSim: 'Zima · foleni ya ndani pekee', deviceUnknown: 'Inaangaliwa…',
     photoSuggestion: 'Pendekezo la mfano', none: 'Hakuna', noObservation: 'Hakuna uchunguzi ulioandikwa.',
@@ -214,6 +226,8 @@ function makeEmptyForm(site: string): LandingForm {
     site,
     landedAt: newLocalDateTime(),
     vessel: '',
+    fisherman: '',
+    boatSize: '',
     crewCount: '',
     gear: '',
     departureTime: '',
@@ -255,6 +269,8 @@ function createLocalRecord(form: LandingForm): LandingRecord | null {
     site: form.site,
     landedAt,
     vessel: form.vessel.trim(),
+    fisherman: form.fisherman.trim(),
+    boatSize: form.boatSize.trim(),
     crewCount: form.crewCount ? Number(form.crewCount) || null : null,
     gear: form.gear.trim(),
     departureTime: form.departureTime.trim(),
@@ -435,18 +451,6 @@ function StateBadge({ label, status }: { label: string; status: 'approved' | 'dr
   );
 }
 
-function StatCard({ label, value, icon, colors, accent }: { label: string; value: string; icon: keyof typeof Feather.glyphMap; colors: Palette; accent?: string }) {
-  return (
-    <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      <View style={[styles.statIcon, { backgroundColor: accent ?? colors.seaGlass }]}>
-        <Feather name={icon} size={17} color={colors.deepSea} />
-      </View>
-      <Text style={[styles.statValue, paletteStyle(colors.foreground)]}>{value}</Text>
-      <Text style={[styles.statLabel, paletteStyle(colors.mutedForeground)]}>{label}</Text>
-    </View>
-  );
-}
-
 function AppRecordCard({
   record,
   onPress,
@@ -460,15 +464,18 @@ function AppRecordCard({
   const catchSummary = record.catchItems.map((item) => item.localName || item.speciesGroup || 'Unknown').filter(Boolean).join(' · ');
   const weight = record.catchItems.reduce((sum, item) => sum + item.weightKg, 0);
   const statusLabel = record.status === 'draft' ? COPY[language].draftStatus : record.status === 'approved' ? COPY[language].approvedStatus : COPY[language].rejectedStatus;
+  const detailPreview = record.transcript?.trim() || record.observation?.trim();
+  const identity = [record.vessel || COPY[language].missingInfo, record.fisherman?.trim(), record.boatSize?.trim()].filter(Boolean).join(' · ');
   return (
     <Pressable onPress={onPress} accessibilityRole="button" style={({ pressed }) => [styles.recordRow, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.76 : 1 }]}>
       <View style={styles.recordRowMain}>
         <View style={styles.recordRowTop}>
-          <Text style={[styles.recordVessel, paletteStyle(colors.foreground)]}>{record.vessel || 'Needs confirmation'}</Text>
+          <Text style={[styles.recordVessel, paletteStyle(colors.foreground)]}>{catchSummary || 'Unknown catch'} · {weight.toFixed(1)} kg</Text>
           <StateBadge label={statusLabel} status={record.status} />
         </View>
-        <Text style={[styles.recordCatch, paletteStyle(colors.mutedForeground)]}>{catchSummary || 'Unknown catch'} · {weight.toFixed(1)} kg</Text>
+        <Text style={[styles.recordCatch, paletteStyle(colors.mutedForeground)]}>{identity}</Text>
         <Text style={[styles.recordMeta, paletteStyle(colors.mutedForeground)]}>{formatDateTime(record.landedAt, language)} · {record.site.replace(' · Kilifi BMU', '')}</Text>
+        {detailPreview ? <Text numberOfLines={2} style={[styles.notePreview, paletteStyle(colors.mutedForeground)]}>{detailPreview}</Text> : null}
       </View>
       <Feather name="chevron-right" size={19} color={colors.mutedForeground} />
     </Pressable>
@@ -600,14 +607,16 @@ function RecordDetail({
           <View><Text style={[styles.factLabel, paletteStyle(colors.mutedForeground)]}>{t('source')}</Text><Text style={[styles.factValue, paletteStyle(colors.foreground)]}>{record.source}</Text></View>
           {record.approvedBy ? <View><Text style={[styles.factLabel, paletteStyle(colors.mutedForeground)]}>{t('approvedBy')}</Text><Text style={[styles.factValue, paletteStyle(colors.foreground)]}>{record.approvedBy}</Text></View> : null}
         </View>
-        {record.photoUri ? <Image source={imageSource(record.photoUri)} style={[styles.recordPhoto, { backgroundColor: colors.muted }]} resizeMode="cover" /> : null}
-        {record.transcript ? (
-          <View style={[styles.transcriptBox, { backgroundColor: colors.muted }]}>
-            <Text style={[styles.factLabel, paletteStyle(colors.mutedForeground)]}>{t('transcriptSource')}</Text>
-            <Text style={[styles.bodyText, paletteStyle(colors.foreground)]}>{record.transcript}</Text>
-          </View>
-        ) : null}
-        {record.audioUri ? <Action label={t('playRecording')} icon="volume-2" variant="outline" onPress={() => onPlay(record.audioUri!)} /> : null}
+        {editing ? (
+          <>
+            <Input label={t('fisher')} value={draft.fisherman ?? ''} onChangeText={(fisherman) => setDraft((current) => ({ ...current, fisherman }))} />
+            <Input label={t('boatSize')} value={draft.boatSize ?? ''} onChangeText={(boatSize) => setDraft((current) => ({ ...current, boatSize }))} />
+          </>
+        ) : (
+          <Text style={[styles.recordMeta, paletteStyle(colors.mutedForeground)]}>
+            {[record.fisherman?.trim(), record.boatSize?.trim()].filter(Boolean).join(' · ') || t('notRecorded')}
+          </Text>
+        )}
         {displayedCatchItems.map((item) => (
           <View key={item.id} style={[styles.catchSummaryRow, { borderTopColor: colors.border }]}>
             <View style={{ flex: 1 }}>
@@ -636,7 +645,16 @@ function RecordDetail({
             {!editing && item.photoUri ? <Image source={imageSource(item.photoUri)} style={styles.thumb} resizeMode="cover" /> : null}
           </View>
         ))}
-        {record.observation ? <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>Observation: {record.observation}</Text> : null}
+        <SectionTitle title={t('detailedNotes')} />
+        {record.observation ? <Text style={[styles.bodyText, paletteStyle(colors.foreground)]}>{record.observation}</Text> : null}
+        {record.photoUri ? <Image source={imageSource(record.photoUri)} style={[styles.recordPhoto, { backgroundColor: colors.muted }]} resizeMode="cover" /> : null}
+        {record.transcript ? (
+          <View style={[styles.transcriptBox, { backgroundColor: colors.muted }]}>
+            <Text style={[styles.factLabel, paletteStyle(colors.mutedForeground)]}>{t('transcriptSource')}</Text>
+            <Text style={[styles.bodyText, paletteStyle(colors.foreground)]}>{record.transcript}</Text>
+          </View>
+        ) : null}
+        {record.audioUri ? <Action label={t('playRecording')} icon="volume-2" variant="outline" onPress={() => onPlay(record.audioUri!)} /> : null}
         {record.status === 'approved' && !editing ? <Action label={t('amend')} icon="edit-3" variant="outline" onPress={() => { setDraft(record); setEditing(true); }} /> : null}
         {editing ? (
           <>
@@ -699,6 +717,7 @@ export default function MoaiApp() {
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  const [overviewRange, setOverviewRange] = useState<DateFilter>('all');
   const [speciesFilter, setSpeciesFilter] = useState('');
   const [recordingUri, setRecordingUri] = useState('');
   const [voiceTranscript, setVoiceTranscript] = useState('');
@@ -821,15 +840,16 @@ export default function MoaiApp() {
     }
   };
 
-  const beginRecord = () => {
+  const beginRecord = (mode: CaptureMode = 'choose') => {
     setForm(makeEmptyForm(data?.settings.site ?? DEMO_SITES[0]));
     setFormError('');
+    setSelectedId('');
     setPhotoDraftUri('');
       setPhotoSuggestion(null);
     setRecordingUri('');
     setVoiceTranscript('');
       setVoiceTranscriptIsAi(false);
-    setCaptureMode('choose');
+    setCaptureMode(mode);
     setPage('record');
   };
   const saveManualDraft = () => {
@@ -844,6 +864,7 @@ export default function MoaiApp() {
       return;
     }
     addRecord(record);
+    setSelectedId(record.id);
     setFormError('');
     setPage('review');
     showNotice(t('draftSaved'));
@@ -851,6 +872,7 @@ export default function MoaiApp() {
   const savePreparedVoice = () => {
     const record = aiService.makePreparedVoiceDraft(data?.settings.site ?? DEMO_SITES[0]);
     addRecord(record);
+    setSelectedId(record.id);
     setPage('review');
     showNotice('Prepared voice example added as a draft. Review the seeded 21 kg error.');
   };
@@ -861,6 +883,8 @@ export default function MoaiApp() {
       site: data?.settings.site ?? DEMO_SITES[0],
       landedAt: parseLocalDateTime(newLocalDateTime()) ?? now,
       vessel: '',
+      fisherman: '',
+      boatSize: '',
       crewCount: null,
       gear: '',
       departureTime: '',
@@ -886,6 +910,7 @@ export default function MoaiApp() {
       history: [],
     };
     addRecord(record);
+    setSelectedId(record.id);
     setPage('review');
     showNotice('Voice note saved locally. Complete its fields during review.');
   };
@@ -897,6 +922,8 @@ export default function MoaiApp() {
       site: data?.settings.site ?? DEMO_SITES[0],
       landedAt: parseLocalDateTime(newLocalDateTime()) ?? now,
       vessel: '',
+      fisherman: '',
+      boatSize: '',
       crewCount: null,
       gear: '',
       departureTime: '',
@@ -921,6 +948,7 @@ export default function MoaiApp() {
       history: [],
     };
     addRecord(record);
+    setSelectedId(record.id);
     setPage('review');
     showNotice('Photo saved locally. Add vessel and catch details during review.');
   };
@@ -1087,6 +1115,7 @@ export default function MoaiApp() {
     setSearchText('');
     setStatusFilter('all');
     setDateFilter('all');
+    setOverviewRange('all');
     setSpeciesFilter('');
     setSelectedId('');
     setApprovedRecentlyId('');
@@ -1113,13 +1142,11 @@ export default function MoaiApp() {
   const selectedReview = allCurrentDrafts.find((record) => record.id === selectedId)
     ?? (approvedRecently ? undefined : allCurrentDrafts[0]);
   const todayKey = nairobiDayKey(new Date());
-  const approvedTodayRecords = approvedSiteRecords.filter((record) => nairobiDayKey(record.landedAt) === todayKey);
-  const todayWeight = approvedTodayRecords.reduce((sum, record) => sum + record.catchItems.reduce((total, item) => total + item.weightKg, 0), 0);
   const waitingCount = siteRecords.filter((record) => record.syncStatus === 'waiting').length;
   const filteredRecords = siteRecords.filter((record) => {
     const matchesStatus = statusFilter === 'all' || record.status === statusFilter;
     const search = searchText.trim().toLocaleLowerCase();
-    const matchesSearch = !search || [record.vessel, record.site, ...record.catchItems.flatMap((item) => [item.localName, item.speciesGroup])].join(' ').toLocaleLowerCase().includes(search);
+    const matchesSearch = !search || [record.vessel, record.fisherman, record.boatSize, record.site, record.observation, record.transcript, ...record.catchItems.flatMap((item) => [item.localName, item.speciesGroup])].join(' ').toLocaleLowerCase().includes(search);
     const matchesDate = dateFilter === 'all'
       || (dateFilter === 'today' && nairobiDayKey(record.landedAt) === todayKey)
       || (dateFilter === 'week' && new Date(record.landedAt).getTime() >= Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -1143,80 +1170,99 @@ export default function MoaiApp() {
     settings: activeT('settings'),
   };
   const contentTop = Platform.OS === 'web' ? Math.max(67, insets.top) : insets.top + 8;
-  const activeCountToday = String(approvedTodayRecords.length);
 
-  const renderToday = () => (
-    <View style={styles.stack}>
-      <View style={[styles.heroBlock, { backgroundColor: colors.deepSea }]}>
-        <Text style={[styles.heroKicker, { color: colors.seaGlass }]}>{BMU_NAME.toUpperCase()}</Text>
-        <Text style={[styles.heroName, { color: colors.primaryForeground }]}>{OFFICIAL_NAME}</Text>
-        <Text style={[styles.heroSubtitle, { color: colors.seaGlass }]}>{activeT('official')} · {data.settings.site.replace(' · Kilifi BMU', '')}</Text>
-        <View style={[styles.heroDemoLabel, { backgroundColor: colors.seaGlass }]}>
-          <View style={[styles.statusDot, { backgroundColor: colors.success }]} />
-          <Text style={[styles.heroDemoText, { color: colors.deepSea }]}>{activeT('demo')}</Text>
-        </View>
-      </View>
+  const renderToday = () => {
+    const todayNotes = siteRecords
+      .filter((record) => nairobiDayKey(record.landedAt) === todayKey)
+      .sort((a, b) => new Date(b.landedAt).getTime() - new Date(a.landedAt).getTime());
+    const homeNotes = todayNotes.length
+      ? todayNotes.slice(0, 2)
+      : [...siteRecords].sort((a, b) => new Date(b.landedAt).getTime() - new Date(a.landedAt).getTime()).slice(0, 2);
 
-      <View style={styles.networkSummary}>
-        <View style={styles.networkLine}>
-          <Feather name={deviceInternet === false ? 'wifi-off' : 'wifi'} size={15} color={deviceInternet === false ? colors.warning : colors.success} />
-          <Text style={[styles.networkText, paletteStyle(colors.foreground)]}>{activeT('actualNetwork')}: {deviceInternet === null ? activeT('deviceUnknown') : deviceInternet ? activeT('available') : activeT('unavailable')}</Text>
-        </View>
-        <View style={styles.networkLine}>
-          <Feather name="refresh-cw" size={15} color={data.settings.demoConnectivity ? colors.success : colors.warning} />
-          <Text style={[styles.networkText, paletteStyle(colors.foreground)]}>{activeT('demoSync')}: {data.settings.demoConnectivity ? activeT('onlineSim') : activeT('offlineSim')}</Text>
-        </View>
-        {storageError ? <Text style={[styles.storageError, { color: colors.destructive }]}>{activeT('saveError')}: {storageError}</Text> : null}
-      </View>
-
-      <View style={styles.statsGrid}>
-        <StatCard label={activeT('approvedToday')} value={activeCountToday} icon="check-circle" colors={colors} />
-        <StatCard label={activeT('awaitingReview')} value={String(allCurrentDrafts.length)} icon="clock" colors={colors} accent={colors.paleWarning} />
-        <StatCard label={activeT('waitingSync')} value={String(waitingCount)} icon="upload-cloud" colors={colors} accent={colors.sand} />
-        <StatCard label={activeT('catchWeight')} value={`${todayWeight.toFixed(1)} kg`} icon="anchor" colors={colors} />
-      </View>
-
-      <Pressable onPress={beginRecord} testID="record-a-landing" accessibilityRole="button" style={({ pressed }) => [styles.primaryHeroAction, { backgroundColor: colors.primary, opacity: pressed ? 0.84 : 1 }]}>
-        <View style={[styles.actionIconCircle, { backgroundColor: colors.seaGlass }]}><Feather name="plus" size={23} color={colors.deepSea} /></View>
-        <View style={styles.actionTitleWrap}>
-          <Text style={[styles.primaryHeroTitle, { color: colors.primaryForeground }]}>{activeT('recordLanding')}</Text>
-          <Text style={[styles.primaryHeroSubtitle, { color: colors.seaGlass }]}>{activeT('quickTip')}</Text>
-        </View>
-        <Feather name="arrow-up-right" size={20} color={colors.primaryForeground} />
-      </Pressable>
-
-      <Card colors={colors}>
-        <View style={styles.syncCardHeader}>
-          <View style={styles.flex}>
-            <SectionTitle title={activeT('deviceStatus')} />
-            <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>{activeT('localOnlyInfo')}</Text>
+    return (
+      <View style={styles.stack}>
+        <View style={[styles.homeWelcome, { backgroundColor: colors.deepSea }]}>
+          <Text style={[styles.heroKicker, { color: colors.seaGlass }]}>{BMU_NAME.toUpperCase()}</Text>
+          <Text style={[styles.heroName, { color: colors.primaryForeground }]}>{OFFICIAL_NAME}</Text>
+          <Text style={[styles.heroSubtitle, { color: colors.seaGlass }]}>{data.settings.site.replace(' · Kilifi BMU', '')}</Text>
+          <View style={styles.homeWelcomeFooter}>
+            <View style={[styles.heroDemoLabel, { backgroundColor: colors.seaGlass }]}>
+              <View style={[styles.statusDot, { backgroundColor: colors.success }]} />
+              <Text style={[styles.heroDemoText, { color: colors.deepSea }]}>{activeT('demo')}</Text>
+            </View>
           </View>
-          <Pressable onPress={() => setPage('settings')} accessibilityRole="button" accessibilityLabel={activeT('settings')} style={styles.settingsIcon}>
-            <Feather name="settings" size={19} color={colors.primary} />
+        </View>
+
+        <View style={styles.homeCaptureIntro}>
+          <Text style={[styles.cardTitle, paletteStyle(colors.foreground)]}>{activeT('recordLanding')}</Text>
+          <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>{activeT('captureIntro')}</Text>
+        </View>
+        <View style={styles.captureGrid}>
+          <Pressable
+            onPress={() => beginRecord('photo')}
+            testID="record-photo"
+            accessibilityRole="button"
+            accessibilityLabel={activeT('photoCatch')}
+            style={({ pressed }) => [styles.captureAction, { backgroundColor: colors.deepSea, opacity: pressed ? 0.84 : 1 }]}
+          >
+            <View style={[styles.captureIcon, { backgroundColor: colors.seaGlass }]}>
+              <Feather name="camera" size={23} color={colors.deepSea} />
+            </View>
+            <View>
+              <Text style={[styles.captureTitle, { color: colors.primaryForeground }]}>{activeT('photoCatch')}</Text>
+              <Text style={[styles.captureHint, { color: colors.seaGlass }]}>{activeT('photoNote')}</Text>
+            </View>
+          </Pressable>
+          <Pressable
+            onPress={() => beginRecord('voice')}
+            testID="record-voice"
+            accessibilityRole="button"
+            accessibilityLabel={activeT('voiceReport')}
+            style={({ pressed }) => [styles.captureAction, { backgroundColor: colors.primary, opacity: pressed ? 0.84 : 1 }]}
+          >
+            <View style={[styles.captureIcon, { backgroundColor: colors.card }]}>
+              <Feather name="mic" size={23} color={colors.primary} />
+            </View>
+            <View>
+              <Text style={[styles.captureTitle, { color: colors.primaryForeground }]}>{activeT('voiceReport')}</Text>
+              <Text style={[styles.captureHint, { color: colors.seaGlass }]}>{activeT('voiceNote')}</Text>
+            </View>
           </Pressable>
         </View>
-        <View style={styles.syncStatusRow}>
-          <View style={styles.flex}>
-            <Text style={[styles.recordVessel, paletteStyle(colors.foreground)]}>{localSaved ? activeT('savedPhone') : storageError ? activeT('saveError') : activeT('saving')}</Text>
-            <Text style={[styles.recordMeta, paletteStyle(colors.mutedForeground)]}>{activeT('waitingSync')}: {waitingCount}</Text>
-          </View>
-          <StateBadge label={localSaved ? activeT('locallySaved') : activeT('saving')} status={localSaved ? 'simulated' : 'waiting'} />
-        </View>
-        <Text style={[styles.syncDisclosure, paletteStyle(colors.mutedForeground)]}>{activeT('simOnly')}</Text>
-        {waitingCount > 0 ? <Action label={syncBusy ? 'Working…' : activeT('retrySync')} icon="refresh-cw" variant="outline" disabled={syncBusy} onPress={syncNow} /> : null}
-      </Card>
+        <Pressable onPress={() => beginRecord('details')} testID="record-manual" accessibilityRole="button" style={styles.manualCaptureLink}>
+          <Feather name="edit-3" size={16} color={colors.primary} />
+          <Text style={[styles.manualCaptureText, { color: colors.primary }]}>{activeT('enterDetails')}</Text>
+          <Feather name="arrow-right" size={16} color={colors.primary} />
+        </Pressable>
 
-      {allCurrentDrafts.length > 0 ? (
-        <View style={styles.stackTight}>
-          <SectionTitle title={activeT('pendingList')} aside={`${allCurrentDrafts.length}`} />
-          {allCurrentDrafts.slice(0, 2).map((record) => (
-            <AppRecordCard key={record.id} record={record} language={language} onPress={() => { setSelectedId(record.id); setPage('review'); }} />
-          ))}
+        <View style={styles.homeNotesHeading}>
+          <View style={styles.flex}>
+            <SectionTitle title={todayNotes.length ? activeT('notesToday') : activeT('recentNotes')} aside={todayNotes.length ? String(todayNotes.length) : undefined} />
+          </View>
+          <Pressable onPress={() => { setSelectedId(''); setPage('records'); }} accessibilityRole="button" style={styles.viewAllNotes}>
+            <Text style={[styles.viewAllNotesText, { color: colors.primary }]}>{activeT('viewAllNotes')}</Text>
+            <Feather name="arrow-right" size={15} color={colors.primary} />
+          </Pressable>
         </View>
-      ) : null}
-      <Text style={[styles.prototypeFootnote, paletteStyle(colors.mutedForeground)]}>MOAI BMU · {activeT('demo')} · Local prototype data</Text>
-    </View>
-  );
+        {homeNotes.length ? homeNotes.map((record) => (
+          <AppRecordCard
+            key={record.id}
+            record={record}
+            language={language}
+            onPress={() => {
+              setSelectedId(record.id);
+              setPage(record.status === 'draft' ? 'review' : 'records');
+            }}
+          />
+        )) : (
+          <Card colors={colors}>
+            <Text style={[styles.bodyText, paletteStyle(colors.mutedForeground)]}>{activeT('noNotesToday')}</Text>
+          </Card>
+        )}
+        {storageError ? <Text style={[styles.storageError, { color: colors.destructive }]}>{activeT('saveError')}: {storageError}</Text> : null}
+      </View>
+    );
+  };
 
   const renderRecord = () => (
     <View style={styles.stack}>
@@ -1252,6 +1298,8 @@ export default function MoaiApp() {
           <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>{activeT('site')}: {form.site} · EAT (Africa/Nairobi)</Text>
           <Input label={activeT('dateTime')} value={form.landedAt} onChangeText={(landedAt) => updateForm({ landedAt })} placeholder="YYYY-MM-DDTHH:MM" />
           <Input label={activeT('vessel')} value={form.vessel} onChangeText={(vessel) => updateForm({ vessel })} placeholder="e.g. KLF 104" />
+          <Input label={activeT('fisher')} value={form.fisherman} onChangeText={(fisherman) => updateForm({ fisherman })} placeholder={activeT('notRecorded')} />
+          <Input label={activeT('boatSize')} value={form.boatSize} onChangeText={(boatSize) => updateForm({ boatSize })} placeholder="e.g. Small canoe, 6 m dhow" />
           <View style={styles.twoInputs}>
             <View style={styles.flex}><Input label={activeT('crew')} value={form.crewCount} onChangeText={(crewCount) => updateForm({ crewCount })} keyboardType="numeric" placeholder="Optional" /></View>
             <View style={styles.flex}><Input label={activeT('gear')} value={form.gear} onChangeText={(gear) => updateForm({ gear })} placeholder="Optional" /></View>
@@ -1475,6 +1523,25 @@ export default function MoaiApp() {
 
   const renderRecords = () => {
     const selected = selectedId ? siteRecords.find((record) => record.id === selectedId) : undefined;
+    const yesterdayKey = nairobiDayKey(new Date(Date.now() - 24 * 60 * 60 * 1000));
+    const sortedRecords = [...filteredRecords].sort((a, b) => new Date(b.landedAt).getTime() - new Date(a.landedAt).getTime());
+    const groupedRecords = new Map<string, LandingRecord[]>();
+    sortedRecords.forEach((record) => {
+      const key = nairobiDayKey(record.landedAt) || 'unknown-date';
+      groupedRecords.set(key, [...(groupedRecords.get(key) ?? []), record]);
+    });
+    const noteGroupTitle = (key: string) => {
+      if (key === todayKey) return activeT('day');
+      if (key === yesterdayKey) return activeT('yesterday');
+      if (key === 'unknown-date') return activeT('missingInfo');
+      return new Intl.DateTimeFormat(language === 'sw' ? 'sw-KE' : 'en-KE', {
+        timeZone: 'Africa/Nairobi',
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }).format(new Date(`${key}T12:00:00+03:00`));
+    };
     return (
       <View style={styles.stack}>
         {selected ? (
@@ -1495,7 +1562,8 @@ export default function MoaiApp() {
         ) : (
           <>
             <Text style={[styles.screenLead, paletteStyle(colors.foreground)]}>{activeT('records')}</Text>
-            <Input label={activeT('search')} value={searchText} onChangeText={setSearchText} placeholder="Vessel, fish name, species" />
+            <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>{data.settings.site} · Notes are grouped by landing date.</Text>
+            <Input label={activeT('search')} value={searchText} onChangeText={setSearchText} placeholder="Vessel, fisherman, fish name, species" />
             <Text style={[styles.fieldLabel, paletteStyle(colors.foreground)]}>{activeT('filters')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
               {([
@@ -1524,15 +1592,27 @@ export default function MoaiApp() {
                 <ChoiceChip key={species} label={species} selected={speciesFilter === species} onPress={() => setSpeciesFilter(species)} />
               ))}
             </ScrollView>
-            <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>{filteredRecords.length} records · {data.settings.site}</Text>
-            {filteredRecords.length ? (
-              filteredRecords.map((record) => (
-                <View key={record.id} style={styles.recordCardWrap}>
-                  <AppRecordCard record={record} language={language} onPress={() => setSelectedId(record.id)} />
-                  <View style={styles.recordSyncLine}>
-                    <Feather name={record.syncStatus === 'waiting' ? 'cloud-off' : 'check'} size={13} color={record.syncStatus === 'waiting' ? colors.warning : colors.success} />
-                    <Text style={[styles.recordMeta, paletteStyle(colors.mutedForeground)]}>{record.syncStatus === 'waiting' ? activeT('syncWaiting') : activeT('syncedDemo')}</Text>
-                  </View>
+            <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>{filteredRecords.length} notes</Text>
+            {sortedRecords.length ? (
+              [...groupedRecords.entries()].map(([day, records]) => (
+                <View key={day} style={styles.noteDayGroup}>
+                  <Text style={[styles.noteDayHeading, paletteStyle(colors.mutedForeground)]}>{noteGroupTitle(day)}</Text>
+                  {records.map((record) => (
+                    <View key={record.id} style={styles.recordCardWrap}>
+                      <AppRecordCard
+                        record={record}
+                        language={language}
+                        onPress={() => {
+                          setSelectedId(record.id);
+                          if (record.status === 'draft') setPage('review');
+                        }}
+                      />
+                      <View style={styles.recordSyncLine}>
+                        <Feather name={record.syncStatus === 'waiting' ? 'cloud-off' : 'check'} size={13} color={record.syncStatus === 'waiting' ? colors.warning : colors.success} />
+                        <Text style={[styles.recordMeta, paletteStyle(colors.mutedForeground)]}>{record.syncStatus === 'waiting' ? activeT('syncWaiting') : activeT('syncedDemo')}</Text>
+                      </View>
+                    </View>
+                  ))}
                 </View>
               ))
             ) : (
@@ -1545,12 +1625,13 @@ export default function MoaiApp() {
   };
 
   const renderSummary = () => {
-    const now = Date.now();
-    const weekRecords = approvedSiteRecords.filter((record) => {
+    const approvedOverviewRecords = data.records.filter((record) => record.status === 'approved');
+    const overviewRecords = approvedOverviewRecords.filter((record) => {
+      if (overviewRange === 'all') return true;
+      if (overviewRange === 'today') return nairobiDayKey(record.landedAt) === todayKey;
       const time = new Date(record.landedAt).getTime();
-      return time >= now - 7 * 24 * 60 * 60 * 1000 && time <= now;
+      return time >= Date.now() - 7 * 24 * 60 * 60 * 1000 && time <= Date.now();
     });
-    const todayRecords = approvedSiteRecords.filter((record) => nairobiDayKey(record.landedAt) === todayKey);
     const calcStats = (records: LandingRecord[]) => {
       const allItems = records.flatMap((record) => record.catchItems);
       const weights = allItems.reduce((sum, item) => sum + item.weightKg, 0);
@@ -1560,16 +1641,30 @@ export default function MoaiApp() {
       const missingPriceRecords = records.filter((record) => record.catchItems.some((item) => item.priceBasis === 'unknown' || item.priceAmount === null)).length;
       return { landings: records.length, weights, value, pricedCatchItems, missingPriceRecords, allItems };
     };
-    const dayStats = calcStats(todayRecords);
-    const weekStats = calcStats(weekRecords);
-    const grouped = new Map<string, number>();
-    weekStats.allItems.forEach((item) => {
+    const stats = calcStats(overviewRecords);
+    const speciesWeights = new Map<string, number>();
+    stats.allItems.forEach((item) => {
       const label = item.localName || item.speciesGroup || activeT('unknownSpecies');
-      grouped.set(label, (grouped.get(label) ?? 0) + item.weightKg);
+      speciesWeights.set(label, (speciesWeights.get(label) ?? 0) + item.weightKg);
     });
-    const groups = [...grouped.entries()].sort((a, b) => b[1] - a[1]);
+    const speciesGroups = [...speciesWeights.entries()].sort((a, b) => b[1] - a[1]);
+    const groupLandings = (getLabel: (record: LandingRecord) => string | undefined) => {
+      const grouped = new Map<string, { weight: number; landings: number }>();
+      overviewRecords.forEach((record) => {
+        const label = getLabel(record)?.trim() || activeT('notRecorded');
+        const catchWeight = record.catchItems.reduce((sum, item) => sum + item.weightKg, 0);
+        const current = grouped.get(label) ?? { weight: 0, landings: 0 };
+        current.weight += catchWeight;
+        current.landings += 1;
+        grouped.set(label, current);
+      });
+      return [...grouped.entries()].sort((a, b) => b[1].weight - a[1].weight);
+    };
+    const fisherGroups = groupLandings((record) => record.fisherman);
+    const siteGroups = groupLandings((record) => record.site.replace(' · Kilifi BMU', ''));
+    const boatGroups = groupLandings((record) => record.boatSize);
     const unitPriceGroups = new Map<string, { total: number; count: number }>();
-    weekStats.allItems.forEach((item) => {
+    stats.allItems.forEach((item) => {
       if (item.priceBasis !== 'per_kg' || item.priceAmount === null) return;
       const label = item.localName || item.speciesGroup || activeT('unknownSpecies');
       const group = unitPriceGroups.get(label) ?? { total: 0, count: 0 };
@@ -1578,7 +1673,7 @@ export default function MoaiApp() {
       unitPriceGroups.set(label, group);
     });
     const unitPriceRows = [...unitPriceGroups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-    const totalSaleObservations = weekStats.allItems.filter((item) => item.priceBasis === 'total' && item.priceAmount !== null).length;
+    const totalSaleObservations = stats.allItems.filter((item) => item.priceBasis === 'total' && item.priceAmount !== null).length;
     const shareCsv = async () => {
       try {
         const csv = toCsv(approvedSiteRecords);
@@ -1623,23 +1718,49 @@ export default function MoaiApp() {
         </View>
       </Card>
     );
+    const breakdownSection = (label: string, rows: [string, { weight: number; landings: number }][]) => (
+      <Card colors={colors}>
+        <SectionTitle title={label} />
+        {rows.length ? rows.map(([name, values]) => (
+          <View key={name} style={[styles.speciesRow, { borderBottomColor: colors.border }]}>
+            <View style={styles.flex}>
+              <Text style={[styles.recordVessel, paletteStyle(colors.foreground)]}>{name}</Text>
+              <Text style={[styles.recordMeta, paletteStyle(colors.mutedForeground)]}>{values.landings} {activeT('landings').toLocaleLowerCase()}</Text>
+            </View>
+            <Text style={[styles.weightStrong, paletteStyle(colors.deepSea)]}>{values.weight.toFixed(1)} kg</Text>
+          </View>
+        )) : <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>{activeT('noSummary')}</Text>}
+      </Card>
+    );
     return (
       <View style={styles.stack}>
         <Text style={[styles.screenLead, paletteStyle(colors.foreground)]}>{activeT('summary')}</Text>
-        <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>{data.settings.site}</Text>
-        {summarySection(activeT('day'), dayStats)}
-        {summarySection(activeT('week'), weekStats)}
+        <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>{BMU_NAME} · approved records across landing sites</Text>
+        <Text style={[styles.fieldLabel, paletteStyle(colors.foreground)]}>{activeT('date')}</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+          {([
+            ['all', activeT('all')],
+            ['today', activeT('day')],
+            ['week', activeT('week')],
+          ] as [DateFilter, string][]).map(([value, label]) => (
+            <ChoiceChip key={value} label={label} selected={overviewRange === value} onPress={() => setOverviewRange(value)} />
+          ))}
+        </ScrollView>
+        {summarySection(overviewRange === 'all' ? activeT('overallCatch') : overviewRange === 'today' ? activeT('day') : activeT('week'), stats)}
         <Card colors={colors}>
-          <SectionTitle title={activeT('bySpecies')} aside={activeT('last7Days')} />
-          {groups.length ? groups.map(([label, weight]) => (
+          <SectionTitle title={activeT('bySpecies')} />
+          {speciesGroups.length ? speciesGroups.map(([label, weight]) => (
             <View key={label} style={[styles.speciesRow, { borderBottomColor: colors.border }]}>
-              <View style={styles.flex}><Text style={[styles.recordVessel, paletteStyle(colors.foreground)]}>{label}</Text><Text style={[styles.recordMeta, paletteStyle(colors.mutedForeground)]}>{weekStats.weights ? `${Math.round(weight / weekStats.weights * 100)}% of recorded kg` : ''}</Text></View>
+              <View style={styles.flex}><Text style={[styles.recordVessel, paletteStyle(colors.foreground)]}>{label}</Text><Text style={[styles.recordMeta, paletteStyle(colors.mutedForeground)]}>{stats.weights ? `${Math.round(weight / stats.weights * 100)}% of recorded kg` : ''}</Text></View>
               <Text style={[styles.weightStrong, paletteStyle(colors.deepSea)]}>{weight.toFixed(1)} kg</Text>
             </View>
           )) : <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>{activeT('noSummary')}</Text>}
         </Card>
+        {breakdownSection(activeT('byFisher'), fisherGroups)}
+        {breakdownSection(activeT('byLandingSite'), siteGroups)}
+        {breakdownSection(activeT('byBoatSize'), boatGroups)}
         <Card colors={colors}>
-          <SectionTitle title={activeT('pricesObserved')} aside={activeT('last7Days')} />
+          <SectionTitle title={activeT('pricesObserved')} />
           <Text style={[styles.fieldLabel, paletteStyle(colors.foreground)]}>{activeT('unitPrices')}</Text>
           {unitPriceRows.length ? unitPriceRows.map(([label, values]) => (
             <View key={label} style={[styles.speciesRow, { borderBottomColor: colors.border }]}>
@@ -1650,7 +1771,6 @@ export default function MoaiApp() {
           <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>
             {activeT('totalSaleObservations')}: {totalSaleObservations}
           </Text>
-          <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>{activeT('priceNote')}</Text>
           <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>{activeT('priceNote')}</Text>
         </Card>
         <Card colors={colors}>
@@ -1782,6 +1902,7 @@ export default function MoaiApp() {
       </View>
       {notice ? <View style={[styles.notice, { backgroundColor: colors.deepSea }]}><Feather name="info" size={16} color={colors.seaGlass} /><Text style={[styles.noticeText, { color: colors.primaryForeground }]}>{notice}</Text><Pressable onPress={() => setNotice('')}><Feather name="x" size={17} color={colors.seaGlass} /></Pressable></View> : null}
       <KeyboardAwareScrollViewCompat
+        key={`${page}-${selectedId}`}
         style={styles.scroll}
         contentContainerStyle={[styles.pageContent, { paddingBottom: 22 + (Platform.OS === 'web' ? 0 : insets.bottom) }]}
         keyboardDismissMode="interactive"
@@ -1793,25 +1914,23 @@ export default function MoaiApp() {
       <View style={[styles.tabBar, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: Platform.OS === 'web' ? 34 : Math.max(8, insets.bottom) }]}>
         {([
           ['today', activeT('today'), 'home'],
-          ['review', activeT('review'), 'check-square'],
-          ['record', activeT('record'), 'plus-circle'],
           ['records', activeT('records'), 'file-text'],
+          ['review', activeT('review'), 'check-square'],
           ['summary', activeT('summary'), 'bar-chart-2'],
         ] as [Page, string, keyof typeof Feather.glyphMap][]).map(([tab, label, icon]) => {
           const selected = page === tab;
-          const active = tab === 'record' && page === 'record';
           return (
             <Pressable
               key={tab}
-              onPress={() => tab === 'record' ? beginRecord() : setPage(tab)}
+              onPress={() => setPage(tab)}
               accessibilityRole="button"
               accessibilityState={{ selected }}
               accessibilityLabel={label}
               testID={`tab-${tab}`}
               style={styles.tabItem}
             >
-              <View style={[styles.tabIconWrap, active && { backgroundColor: colors.deepSea }]}>
-                <Feather name={icon} size={18} color={active ? colors.seaGlass : selected ? colors.primary : colors.mutedForeground} />
+              <View style={styles.tabIconWrap}>
+                <Feather name={icon} size={18} color={selected ? colors.primary : colors.mutedForeground} />
                 {tab === 'review' && allCurrentDrafts.length > 0 ? <View style={[styles.tabDot, { backgroundColor: colors.warning }]} /> : null}
               </View>
               <Text numberOfLines={1} style={[styles.tabLabel, { color: selected ? colors.primary : colors.mutedForeground, fontWeight: selected ? '700' : '500' }]}>{label}</Text>
@@ -1864,17 +1983,6 @@ function ReviewEditor({
             <Text style={[styles.warningText, { color: colors.warning }]}>{t('seededError')}</Text>
           </View>
         ) : null}
-        {record.source === 'voice' ? (
-          <View style={[styles.transcriptBox, { backgroundColor: colors.muted }]}>
-            <Text style={[styles.factLabel, paletteStyle(colors.mutedForeground)]}>{t('transcriptSource')}</Text>
-            <Text style={[styles.bodyText, paletteStyle(colors.foreground)]}>{record.transcript || 'No transcript provided. Enter details manually.'}</Text>
-            {record.aiTranscription ? <Text style={[styles.helperText, paletteStyle(colors.warning)]}>{t('aiTranscriptReview')}</Text> : null}
-            {record.audioUri ? <Action label={t('playRecording')} icon="volume-2" variant="outline" onPress={() => onPlay(record.audioUri!)} /> : null}
-            {!record.audioUri ? <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>Prepared text only · no audio recording attached.</Text> : null}
-          </View>
-        ) : null}
-        {record.source === 'photo' && record.photoUri ? <Image source={imageSource(record.photoUri)} style={[styles.recordPhoto, { backgroundColor: colors.muted }]} resizeMode="cover" /> : null}
-        {record.source === 'photo' ? <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>{record.photoUri === 'prepared-demo' ? t('preparedImageNote') : t('arbitraryPhotoNote')} {t('photoNoInference')}</Text> : null}
         {record.aiPhotoSuggestion ? (
           <View style={[styles.warningBox, { backgroundColor: colors.paleWarning, borderColor: colors.sand }]}>
             <Feather name="alert-triangle" size={18} color={colors.warning} />
@@ -1904,9 +2012,12 @@ function ReviewEditor({
             </View>
           </View>
         ) : null}
+        <SectionTitle title={t('extractedSummary')} />
         <Input label={t('site')} value={record.site} onChangeText={(site) => onChange({ ...record, site })} />
         <Input label={t('dateTime')} value={localDateInput(record.landedAt)} onChangeText={(value) => onChange({ ...record, landedAt: parseLocalDateTime(value) ?? value })} placeholder="YYYY-MM-DDTHH:MM" />
         <Input label={t('vessel')} value={record.vessel} onChangeText={(vessel) => onChange({ ...record, vessel })} placeholder={t('missingInfo')} />
+        <Input label={t('fisher')} value={record.fisherman ?? ''} onChangeText={(fisherman) => onChange({ ...record, fisherman })} placeholder={t('notRecorded')} />
+        <Input label={t('boatSize')} value={record.boatSize ?? ''} onChangeText={(boatSize) => onChange({ ...record, boatSize })} placeholder="e.g. Small canoe, 6 m dhow" />
         <SectionTitle title={t('catchItems')} />
         {record.catchItems.map((item, index) => (
           <View key={item.id} style={[styles.catchEditor, { backgroundColor: colors.background, borderColor: item.weightKg === 21 && record.seededVoiceError ? colors.warning : colors.border }]}>
@@ -1935,6 +2046,18 @@ function ReviewEditor({
           ...record,
           catchItems: [...record.catchItems, { id: makeId('CATCH'), localName: '', speciesGroup: '', weightKg: 0, weightBasis: 'measured', priceBasis: 'unknown', priceAmount: null }],
         })} />
+        <SectionTitle title={t('detailedNotes')} />
+        {record.source === 'voice' ? (
+          <View style={[styles.transcriptBox, { backgroundColor: colors.muted }]}>
+            <Text style={[styles.factLabel, paletteStyle(colors.mutedForeground)]}>{t('transcriptSource')}</Text>
+            <Text style={[styles.bodyText, paletteStyle(colors.foreground)]}>{record.transcript || 'No transcript provided. Enter details manually.'}</Text>
+            {record.aiTranscription ? <Text style={[styles.helperText, paletteStyle(colors.warning)]}>{t('aiTranscriptReview')}</Text> : null}
+            {record.audioUri ? <Action label={t('playRecording')} icon="volume-2" variant="outline" onPress={() => onPlay(record.audioUri!)} /> : null}
+            {!record.audioUri ? <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>Prepared text only · no audio recording attached.</Text> : null}
+          </View>
+        ) : null}
+        {record.source === 'photo' && record.photoUri ? <Image source={imageSource(record.photoUri)} style={[styles.recordPhoto, { backgroundColor: colors.muted }]} resizeMode="cover" /> : null}
+        {record.source === 'photo' ? <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>{record.photoUri === 'prepared-demo' ? t('preparedImageNote') : t('arbitraryPhotoNote')} {t('photoNoInference')}</Text> : null}
         <Input label={t('observation')} value={record.observation} onChangeText={(observation) => onChange({ ...record, observation })} multiline placeholder="Optional context, separate from catch measurements" />
         <Text style={[styles.helperText, paletteStyle(colors.mutedForeground)]}>Validation used here is configurable demo guidance, not an official Kenya reporting rule.</Text>
         <Action label={t('saveDraft')} icon="save" variant="outline" onPress={onSave} />
@@ -1964,6 +2087,19 @@ const styles = StyleSheet.create({
   pageContent: { paddingHorizontal: 16, paddingTop: 5, gap: 16 },
   stack: { gap: 15 },
   stackTight: { gap: 9 },
+  homeWelcome: { borderRadius: 22, padding: 20, overflow: 'hidden', gap: 3 },
+  homeWelcomeFooter: { flexDirection: 'row', alignItems: 'center', marginTop: 13 },
+  homeCaptureIntro: { gap: 5, marginTop: 1 },
+  captureGrid: { flexDirection: 'row', gap: 12 },
+  captureAction: { flex: 1, minHeight: 144, borderRadius: 20, padding: 15, justifyContent: 'space-between' },
+  captureIcon: { width: 46, height: 46, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  captureTitle: { fontSize: 14, lineHeight: 19, fontWeight: '800' },
+  captureHint: { fontSize: 11, lineHeight: 15, marginTop: 3 },
+  manualCaptureLink: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
+  manualCaptureText: { fontSize: 13, fontWeight: '700' },
+  homeNotesHeading: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 5 },
+  viewAllNotes: { minHeight: 38, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  viewAllNotesText: { fontSize: 12, fontWeight: '700' },
   heroBlock: { borderRadius: 22, padding: 20, overflow: 'hidden' },
   heroKicker: { fontSize: 10, letterSpacing: 1.6, fontWeight: '800' },
   heroName: { fontSize: 27, lineHeight: 34, fontWeight: '800', marginTop: 7 },
@@ -2053,6 +2189,9 @@ const styles = StyleSheet.create({
   recordRow: { minHeight: 87, borderWidth: 1, borderRadius: 15, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 9 },
   recordRowMain: { flex: 1, gap: 4 },
   recordRowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+  noteDayGroup: { gap: 8 },
+  noteDayHeading: { fontSize: 11, lineHeight: 16, fontWeight: '800', letterSpacing: 0.7, textTransform: 'uppercase', marginTop: 3 },
+  notePreview: { fontSize: 12, lineHeight: 17, marginTop: 2 },
   recordVessel: { fontSize: 13, fontWeight: '800' },
   recordCatch: { fontSize: 12, lineHeight: 17 },
   recordMeta: { fontSize: 10, lineHeight: 15 },

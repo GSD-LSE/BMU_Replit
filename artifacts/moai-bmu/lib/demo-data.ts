@@ -15,6 +15,8 @@ const LOCAL_CATCHES = [
   { localName: 'Pweza', speciesGroup: 'Octopus', weight: 3.4 },
   { localName: 'Kolekole', speciesGroup: 'Scad', weight: 11.6 },
 ];
+const DEMO_FISHERS = ['Amina Juma', 'Hassan Mwalimu', 'Juma Said', 'Fatuma Bakari'];
+const DEMO_BOAT_SIZES = ['Small canoe', 'Medium dhow', 'Large dhow', 'Small canoe'];
 
 function item(
   id: string,
@@ -40,9 +42,11 @@ function seedRecord(
   const createdAt = new Date(Date.now() - (index % 7) * 24 * 60 * 60 * 1000 - index * 19 * 60 * 1000).toISOString();
   const record: LandingRecord = {
     id: `DEMO-${String(index + 1).padStart(2, '0')}`,
-    site: DEMO_SITES[0],
+    site: DEMO_SITES[index % DEMO_SITES.length],
     landedAt: createdAt,
     vessel: `KLF ${String(24 + index).padStart(3, '0')}`,
+    fisherman: DEMO_FISHERS[index % DEMO_FISHERS.length],
+    boatSize: DEMO_BOAT_SIZES[index % DEMO_BOAT_SIZES.length],
     crewCount: 3 + (index % 5),
     gear: index % 2 ? 'Hand line' : 'Basket trap',
     departureTime: '',

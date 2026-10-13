@@ -35,6 +35,8 @@ export type LandingRecord = {
   site: string;
   landedAt: string;
   vessel: string;
+  fisherman?: string;
+  boatSize?: string;
   crewCount: number | null;
   gear: string;
   departureTime: string;
@@ -83,6 +85,8 @@ export type LandingForm = {
   site: string;
   landedAt: string;
   vessel: string;
+  fisherman: string;
+  boatSize: string;
   crewCount: string;
   gear: string;
   departureTime: string;
@@ -194,7 +198,7 @@ export function toCsv(records: LandingRecord[]): string {
     return `"${text.replace(/"/g, '""')}"`;
   };
   const header = [
-    'record_id', 'landing_site', 'landing_time_africa_nairobi', 'vessel',
+    'record_id', 'landing_site', 'landing_time_africa_nairobi', 'vessel', 'fisherman', 'boat_size_type',
     'status', 'catch_local_name', 'species_group', 'weight_kg', 'weight_basis',
     'price_basis', 'price_amount_kes', 'recorded_sale_value_kes', 'sync_status',
   ];
@@ -204,6 +208,8 @@ export function toCsv(records: LandingRecord[]): string {
       record.site,
       formatDateTime(record.landedAt),
       record.vessel,
+      record.fisherman,
+      record.boatSize,
       record.status,
       item.localName,
       item.speciesGroup,
