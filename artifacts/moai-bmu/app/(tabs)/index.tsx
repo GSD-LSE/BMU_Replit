@@ -1,1 +1,1 @@
-export { default } from '@/components/MoaiApp';
+export { default } from '@/components/prototype/PrototypeApp';

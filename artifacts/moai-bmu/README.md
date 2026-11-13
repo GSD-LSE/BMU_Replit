@@ -1,34 +1,76 @@
-# MOAI BMU
+# MOAI BMU — Add, Edit, and Send prototype
 
-MOAI BMU is a mobile-first demonstration for a Beach Management Unit official to capture fish landings, review and correct draft notes, approve records, and inspect a BMU overview. It uses synthetic data and is intended for demonstrations, not operational reporting.
+Phone-portrait, English, offline-first, **synthetic data only**. The current mobile entry implements the supplied `attached_assets/screen-specs_1794602551543.md`, including assumptions A1–A8. Home contains Add record, To review, Send data and recent records; navigation is Home / Records / Settings. There is no approval or analytics flow.
 
-## Run the prototype
+## Isolation and safety
 
-Open the **MOAI BMU** mobile preview in Replit. For a physical Android phone, open **Preview on your phone** and scan its QR code with Expo Go. The app is designed for a narrow phone screen and can also be viewed in the web preview.
+- New prototype state uses **`moai-bmu-scenarios-v1`**. The older `moai-bmu-demo-v1` storage and legacy capture component remain separate, unchanged by reset.
+- Prototype screens do not import the legacy AI service, API client, file sharing, networking, or background-task APIs.
+- Photo reading is a timer and canned species/count results, not inference. The same bundled illustrative image is labeled with its prepared scenario.
+- Sending only records a local simulated attempt. No file is generated, email delivered, upload performed, sharing sheet opened or OS job scheduled.
+- A recurring schedule is a separately saved local preference, not a dispatcher. Switching Online never automatically sends a waiting attempt. Send history offers an explicit **Simulate waiting send now** control.
+- Saved/Approved is the review status; Sent/Waiting to send belongs to a separate simulated attempt. Sent appears on eligible records after a successful simulation. Editing an Approved or Sent record demotes it to Needs review.
+- Dates use the phone clock and Africa/Nairobi calendar days; fixtures use relative dates rather than the inconsistent weekday in the specification’s example.
 
-## Demonstration walkthrough
+## Walkthrough 1 — Add a record
 
-1. On **Home**, start with **Take or upload a photo** or **Record voice**; enter details manually when needed. Recent saved notes appear below the capture actions.
-2. Tap **Record voice** → **Try sample voice report**.
-3. In **Review**, check the extracted summary at the top and the transcript/audio in detailed notes below. The transcript says 12 kg while the seeded draft suggests 21 kg.
-4. Correct the weight to **12 kg** and approve the draft. The approval is saved with the demo official and timestamp.
-5. Open **Notes** to browse saved landings by date, including earlier days. Open a note to review its extracted catch summary and source details.
-6. Open **Overview** for approved catch totals and breakdowns by fish category, fisherman, landing site, and the entered boat size/type.
-7. In **Settings**, switch the demo landing site or language, change simulated connectivity, retry the local sync queue, or reset the demo.
+1. Home → **Add record**. Search for Neema (Mashua), or **Add new boat** using an invented name. Fisher is optional and searchable; linked fishers appear first.
+2. **Boat details** prefills the selected registry snapshot. Try changing crew, vessel length, or engine propulsion/horsepower. The default scope is **This record only**; choose **Update saved boat** to change future prefills on Next or Save.
+3. **Gear and trip**: choose GN/BT to expose mesh size, or HL/LL/DL to expose hook fields. Try FAD Yes to expose Anchored/Free floating. Optional fields may remain empty.
+4. **Photo**: choose A, B, C or Error and tap Take photo. Take photo cycles the next prepared scenario. Use photo goes directly to Review while reading runs. Skip photo opens manual catch entry.
+5. **Review catch**: uncertain Parrot fish and Mullets appear first. Enter weights/prices, choose Looks right or Change, remove a row and Undo within 10 seconds. Expand Looks right and then a species row to edit its count, weight, price and remarks. Add species searches all 44 catalog entries, grouped by the specified four groups.
+6. Only species and approximate counts come from a prepared photo. A new species line recalls the last entered price for that species **today**, if any. Correcting an existing species never overwrites a typed weight or price.
+7. Save record is disabled during reading, with unchecked species, or with invalid numeric input. **Save and add next** during reading/unresolved checks retains **Needs review**, opens a fresh draft and says Saved for review. **Review later** also retains Needs review.
+8. Back retains values. Back on step 1 offers Keep draft or confirmed Discard draft. Records → Resume reopens the persisted step after reload.
 
-The prepared voice draft is deliberately guarded against approval while its weight is still 21 kg. This avoids teaching a demonstration error as a measurement.
+### Prepared photo controls
 
-## What works and what is simulated
+- **A**: 8 species after a short read; 2 require checking.
+- **B**: the same results after **30 seconds**. A progress bar appears after 1 second; percentage and Cancel appear after 10 seconds. You can enter catch lines, Review later or Save and add next while waiting.
+- **C**: no fish found; add species manually or save with only the boat.
+- **Error**: a failed reading; manual entry remains available.
+- If typed lines exist when a reading finishes, results appear under **Suggested from photo**, with explicit Add/Dismiss. They do not replace typed lines or enter totals by themselves.
+- Cancelling prevents late results. A stored due time lets a local simulation finish when the app is open/reopened; this is not an operating-system background job.
 
-- **Works locally:** capture-first home, dated notes, guided landing entry, optional fisherman and boat size/type details, multiple catch items, validation, review and correction, explicit approval/rejection, record filters, amendment reasons and history, CSV export, local persistence, photo capture/upload, and short audio recording/replay.
-- **Prepared examples:** the sample voice transcript and its intentionally incorrect suggested weight, plus one prepared fish photo and its suggested group. These are labeled examples, not analysis of user media.
-- **Offline prototype storage:** drafts, approved records, settings, and selected photos/audio stay in the app's local storage. The app checks the device's internet reachability separately from its demo-connectivity switch.
-- **Simulated sync:** retrying the queue only changes a local status to “Synced · demo only.” It does not upload records, acknowledge a real server, or synchronize multiple devices. Media is retained locally.
-- **AI assistance:** recorded audio can be transcribed and arbitrary photos can receive a species-group suggestion through the API server when its Replit-managed OpenAI integration is configured. Media is sent only after an official requests analysis. Model output is labeled unverified and remains an editable draft; it never supplies measurements or approves a landing. If the service is missing or unreachable, source media stays local and officials can enter details manually. No model credentials are bundled into the app.
-- **Still simulated or unavailable:** server sync, user accounts, and actual BMU/national-system export integration. The sample voice transcript and prepared fish photo remain separate demo examples, not live model analysis.
-- **Demo validation:** required fields and price checks are prototype rules, not claims about Kenya's official reporting requirements. The CSV is a prototype export and has not been checked against Kobo or national FIMS schemas.
-- **Summaries:** overview totals and breakdowns include approved records saved in the prototype across its landing sites. Missing prices are not treated as zero. The results describe captured records, not the whole fishery.
+## Walkthrough 2 — Records and Edit
 
-## Before any field use
+1. Records has default Last 7 days, persistent search/filters, day groups and sticky day headers. Rows offer Edit (Resume for Draft); Needs review also offers Review record, reopening step 5.
+2. Tapping a row opens read-only details. Edit opens collapsed Boat and fisher, Boat details, Gear and trip, Catch and Notes sections.
+3. Change a value. The changed field shows its previous value, with a full changed-field list below. Save requires a reason; Other requires text.
+4. Saving adds field-level history and returns to the same filters, with Edited just now when the row still matches. A status-changing edit may leave an active Approved/Sent filter.
+5. Changes saved, catch removal and record deletion each offer 10-second Undo. Undo preserves audit history. Cancel with changes offers Keep editing or Discard; discarded working edits can also be restored within the Undo window.
+6. Delete is separated from Edit/Save and requires Duplicate, Entered by mistake, or Other plus text. Deleted records leave lists/sends; their history is available in About this prototype.
+7. Uncommitted edit sessions persist on reload; Home/Records offers Resume unsaved edit.
 
-Replace all synthetic data, obtain BMU and fisheries stakeholder review, confirm local names and Swahili wording, confirm reporting and privacy requirements, test offline persistence and media retention on target Android devices, and implement and verify secure server sync before using real records. This prototype is not a production record system.
+## Walkthrough 3 — Send and schedule
+
+1. Home → Send data. Choose Last 2 weeks, Last 4 weeks, previous calendar month, or a custom range. The preview shows eligible/excluded counts and a Review them link.
+2. Only nondeleted Saved or Approved records are eligible, including records previously sent in a simulation. Draft, Needs review, processing or unchecked records are excluded. Zero eligible records disables Next.
+3. Select a saved recipient or enter an email; invalid syntax disables Next. Save this email is checked by default. Message is optional.
+4. Review shows period, record count, recipient, message and “Spreadsheet (CSV)” as the proposed file type. The prototype generates no actual file.
+5. Offline → Send when online → Waiting to send, with Cancel sending. Online → simulated Data sent. Every send screen states **“Prototype: nothing is actually sent.”**
+6. Set up automatic sending is separate. Turn it on, choose frequency/recipient, then Save schedule. It neither sends now nor installs a job.
+
+## Settings and edge states
+
+Collector/site, boat/fisher registries, recipients, automatic schedule and simulated send history are local. About this prototype controls the simulated connection, next photo, local-save failure, empty records and scoped reset. Fixtures include Saved, Approved, Sent, Draft, Needs review and partial-measurement records.
+
+When a write fails the app shows **Not saved on this phone**, does not claim Draft saved, and offers retry. The simulated failure can be disabled from that notice. Writes are serialized to prevent older saves replacing newer edits. Persistence is local, not a backup: clearing app/browser data loses this prototype’s records.
+
+## Verification
+
+```sh
+pnpm --filter @workspace/moai-bmu run typecheck
+pnpm --filter @workspace/moai-bmu run test:prototype
+pnpm --filter @workspace/moai-bmu run test:prototype:e2e
+```
+
+The focused unit suite covers missing values, photo merging, eligibility, reasons/history, Undo, filters, serialized persistence, isolation/no-network boundaries and text contrast. The browser walkthrough uses a fresh 400×800 Chromium context and synthetic fixtures; it never changes another browser’s local storage. It uses `/repl/tools/bin/chromium` by default; override `CHROMIUM_PATH`/`BMU_TEST_URL` where needed. Reports/screenshots go to ignored `generated-artifacts/bmu-prototype/`.
+
+Verified in this workspace: all 17 focused tests, all three browser walkthroughs, a targeted Send recheck including the saved-recipient checkbox, TypeScript checking, and Android/iOS JavaScript exports passed. Browser checks recorded no application console errors or API requests. Native exports can be reproduced with:
+
+```sh
+pnpm --filter @workspace/moai-bmu exec expo export --platform ios --platform android --output-dir ../../generated-artifacts/bmu-native
+```
+
+Physical iOS/Android testing, real keyboards, wet hands, sunlight, accessibility assistive technology and employee usability sessions have **not** been performed. A browser screenshot or JavaScript export is not evidence of device behavior. This work does not complete or replace the separately queued legacy Android capture/approval task.

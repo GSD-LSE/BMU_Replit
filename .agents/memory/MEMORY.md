@@ -1,3 +1,5 @@
 - [Expo package maturity cutoff](expo-package-maturity.md) — if a newly published Expo SDK package is blocked as too recent, use a compatible mature patch rather than bypassing the guard.
 - [AI integration setup availability](ai-integration-setup.md) — verify managed AI provisioning tools exist in the current runtime; keep model routes fail-closed when they do not.
 - [Fishery analytics dimensions](fishery-analytics.md) — keep fisherman and boat size/type optional and editable; never infer missing values for breakdowns.
+- [Scenario prototype scope](prototype-scope.md) — A1–A8 supersede the earlier Home experiment; keep Add/Edit/Send local-only and isolated from legacy data.
+- [Testing callback availability](testing-runtime.md) — when the testing subagent kind is unavailable, run the existing direct Playwright checks instead.

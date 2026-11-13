@@ -57,6 +57,8 @@ const colors = {
     warning: '#9A5811',
     paleWarning: '#FFF1D9',
     dangerSoft: '#FBE9E5',
+    processing: '#1E4E8C',
+    processingSoft: '#E7F0FA',
   },
 
   // Border radius (in px). Sync from the sibling web artifact's --radius
