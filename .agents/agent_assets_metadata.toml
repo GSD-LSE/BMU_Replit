@@ -1,0 +1,72 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "TI_zMNHRR8hcKfJo6W6du"
+uri = "file://design-reference/home-default-desktop.png"
+type = "image"
+title = "MOAI BMU home screen · desktop"
+description = "Playwright capture at 1440 × 1000. The complete desktop and mobile inventory is in design-reference/."
+logical_id = "b23a0f6e-676f-494e-8c8c-f097567ca9ab"
+content_hash = "sha256:704cdfcf1ad396da0185f25f7e4687d97ffaf12685dfd61e437e273f84a652ff"
+size = 58097
+mtime_ms = 1794607645644
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:8ead98c7-7490-492c-a5dd-f2fa9a8e7101/b23a0f6e-676f-494e-8c8c-f097567ca9ab/a251e64b-57ff-4265-a1cc-2aec59227934"
+storage_version_token = "1794609240904908"
+content_type = "image/png"
+
+[[outputs]]
+id = "45B1z1IYniLLCUsMU-YXK"
+uri = "file://design-reference/records-to-review-mobile.png"
+type = "image"
+title = "Records needing review · mobile"
+description = "Playwright capture at 402 × 874."
+logical_id = "89e1fb8e-40e5-49f2-9bff-700f0e19f478"
+content_hash = "sha256:21e13660ae484e02fba0f9471314993906c2fd2cb4e39b34dc01356ac38b9ff6"
+size = 43492
+mtime_ms = 1794607758416
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:8ead98c7-7490-492c-a5dd-f2fa9a8e7101/89e1fb8e-40e5-49f2-9bff-700f0e19f478/32f439fd-7b38-4ecd-92c1-08c828d9a300"
+storage_version_token = "1794609241608149"
+content_type = "image/png"
+
+[[outputs]]
+id = "aDPDA2pvOe4G_X5iVovDt"
+uri = "file://design-reference/add-photo-preview-mobile.png"
+type = "image"
+title = "Add record photo step · mobile"
+description = "Playwright capture at 402 × 874."
+logical_id = "69607d3d-1b28-4fc8-9419-845ad35b718d"
+content_hash = "sha256:158c336898c734d3118cb62596b0efead8f6ba5657a1abfa282740bd5e61fcdf"
+size = 124817
+mtime_ms = 1794607729900
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:8ead98c7-7490-492c-a5dd-f2fa9a8e7101/69607d3d-1b28-4fc8-9419-845ad35b718d/9e396d80-dd6e-4fce-8f03-bc0e7c0f4686"
+storage_version_token = "1794609242278867"
+content_type = "image/png"
+
+[[outputs]]
+id = "5tgIf09H2zPH0OneRDW60"
+uri = "file://design-reference/send-review-desktop.png"
+type = "image"
+title = "Send review step · desktop"
+description = "Playwright capture at 1440 × 1000."
+logical_id = "5cd9aadc-0ab3-4ae6-9a05-ad4bad8612db"
+content_hash = "sha256:3c7d8a8e5912d2feaad81d298bd25e2fdcbdc1b144cf3117aed8daa1fd9e1459"
+size = 60946
+mtime_ms = 1794607763464
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:8ead98c7-7490-492c-a5dd-f2fa9a8e7101/5cd9aadc-0ab3-4ae6-9a05-ad4bad8612db/eba8c9f2-3e99-4112-8ba1-012051e55b92"
+storage_version_token = "1794609242864662"
+content_type = "image/png"
+
+[[outputs]]
+id = "6E2RzE2v2j_GCqdz4Fk9L"
+uri = "file://generated-artifacts/prototype-mobile-screens.zip"
+type = "unspecified"
+title = "Prototype mobile screenshots ZIP"
+description = "Verified ZIP with all 117 mobile screenshots listed in design-reference/README.md."
+logical_id = "c872a4c9-4c13-4de1-ae5c-22b13e90ea8f"
+content_hash = "sha256:688804555886f7f16e84b19ce0c2e65d69e7308481265c5cca625dd0b2fa8f0e"
+size = 5537627
+mtime_ms = 1794609402628
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:8ead98c7-7490-492c-a5dd-f2fa9a8e7101/c872a4c9-4c13-4de1-ae5c-22b13e90ea8f/f36fa8a5-a77e-42c3-bfdc-7b645a2edf6b"
+storage_version_token = "1794609421663330"
+content_type = "application/octet-stream"
