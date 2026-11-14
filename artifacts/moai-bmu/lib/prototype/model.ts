@@ -30,9 +30,9 @@ export const GEARS = [
   'HL · Handline', 'BS · Beach seine', 'RN · Ring net', 'SN · Scoop net',
   'MF · Monofilament', 'RS · Reef seine', 'CN · Cast net', 'TL · Trolling line', 'OT · Other',
 ];
-export type Status = 'Draft' | 'Needs review' | 'Saved' | 'Waiting to send' | 'Couldn’t send' | 'Sent';
-export type Boat = { id: string; name: string; vesselType: string; propulsion: string; horsepower: string; length: string; registration: string; crew: string };
-export type Fisher = { id: string; name: string; boatIds: string[] };
+export type Status = 'Draft' | 'Needs review' | 'Saved' | 'Waiting to send' | "Couldn't send" | 'Sent';
+export type Boat = { id: string; name: string; vesselType: string; propulsion: string; horsepower: string; length: string; registration: string; crew: string; archived?: boolean };
+export type Fisher = { id: string; name: string; boatIds: string[]; archived?: boolean };
 export type PriceSource = "typed here" | "today's price" | 'changed here';
 export type CatchLine = { id: string; speciesId: string; count: string; weight: string; price: string; remarks: string; checked: boolean; origin: 'manual' | 'photo'; alternatives?: string[]; priceSource?: PriceSource; priceSetAt?: string };
 export type DayPrice = { site: string; date: string; speciesId: string; price: string; setAt: string };
@@ -45,25 +45,26 @@ export type CatchRecord = {
   area: string; timeOut: string; timeIn: string; fad: string; fadType: string;
   lines: CatchLine[]; suggestions: CatchLine[]; notes: string; noCatch: boolean; photo?: Photo;
   status: Status; step: number; updateBoat: boolean; history: History[];
-  deleted?: boolean; sentAt?: string; revision: number; editedAt?: string;
+  deleted?: boolean; sentAt?: string; lastSentAt?: string; sentTo?: string; revision: number; editedAt?: string;
 };
 export type Filters = { days: string; from: string; to: string; boatId: string; fisherId: string; statuses: string[]; species: string[]; search: string };
-export type SendDraft = { step: number; period: string; from: string; to: string; email: string; saveEmail: boolean; message: string };
-export type Attempt = { id: string; at: string; from: string; to: string; email: string; message: string; recordIds: string[]; state: 'Sent' | 'Waiting to send' | 'Cancelled' };
+export type SendDraft = { step: number; period: string; from: string; to: string; email: string; saveEmail: boolean; message: string; includeSent?: boolean; noteOpen?: boolean; periodOpen?: boolean };
+export type Attempt = { id: string; at: string; from: string; to: string; email: string; message: string; recordIds: string[]; state: 'Sent' | 'Waiting to send' | "Couldn't send" | 'Cancelled'; includeSent?: boolean; automatic?: boolean };
 export type Schedule = { enabled: boolean; frequency: string; weeks: string; email: string; firstDate: string };
 export type EditSession = { recordId: string; working: CatchRecord; reason: string; otherReason: string; section: string };
 export type Undo = { kind: 'line' | 'edit' | 'delete' | 'discard' | 'discardEdit'; target?: 'edit'; editSession?: EditSession; before: CatchRecord; line?: CatchLine; index?: number; afterRevision: number; expiresAt: number; label: string };
 export type PrototypeState = {
-  version: 1; records: CatchRecord[]; boats: Boat[]; fishers: Fisher[]; recipients: string[]; dayPrices: DayPrice[];
-  settings: { collector: string; county: string; site: string; offline: boolean; failSaves: boolean; nextPhoto: 'A' | 'B' | 'C' | 'Error' };
+  version: 2; records: CatchRecord[]; boats: Boat[]; fishers: Fisher[]; recipients: string[]; dayPrices: DayPrice[];
+  settings: { collector: string; county: string; site: string; offline: boolean; failSaves: boolean; nextPhoto: 'A' | 'B' | 'C' | 'Error'; nextSendFails?: boolean; introSeen?: boolean };
   filters: Filters; schedule: Schedule; attempts: Attempt[]; sendDraft?: SendDraft; edit?: EditSession;
   undo?: Undo; banner?: { text: string; recordId: string }; revision: number;
 };
 export const id = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 export const dayKey = (value: string | number | Date = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Nairobi', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(value));
 export const dayLabel = (value: string) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Nairobi', weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(value));
+export const shortDayLabel = (value: string) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Nairobi', day: 'numeric', month: 'short' }).format(new Date(value));
 export const timeLabel = (value: string) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Nairobi', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(value));
-export const localTime = () => `${dayKey()}T${timeLabel(new Date().toISOString())}`;
+export const localTime = () => new Date().toISOString();
 export function numberValue(text: string): number | null {
   if (!text.trim()) return null;
   const value = Number(text);
@@ -79,7 +80,7 @@ export const blankLine = (speciesId: string, price = '', priceSetAt?: string): C
   id: id('catch'), speciesId, count: '', weight: '', price, remarks: '', checked: true, origin: 'manual',
   ...(price ? { priceSource: "today's price" as const, priceSetAt } : {}),
 });
-export function blankRecord(site = 'Demo landing site'): CatchRecord {
+export function blankRecord(site = 'Msambweni Landing Site'): CatchRecord {
   return { id: id('record'), date: new Date().toISOString(), site, boatId: '', boatName: '', fisherId: '',
     vesselType: '', propulsion: '', horsepower: '', length: '', registration: '', crew: '', gear: '', gearCount: '',
     mesh: '', hookSize: '', hooks: '', area: '', timeOut: '', timeIn: localTime(), fad: '', fadType: '',
@@ -113,7 +114,8 @@ export function validNumbers(r: CatchRecord) {
   return [r.horsepower, r.length, r.crew, r.gearCount, r.mesh, r.hooks, ...r.lines.flatMap(l => [l.count, l.weight, l.price])]
     .every(v => !v.trim() || numberValue(v) !== null);
 }
-export const displayStatus = (r: CatchRecord) => r.photo?.state === 'processing' ? 'Processing' : r.sentAt || r.status === 'Sent' ? 'Sent' : r.status;
+export const displayStatus = (r: CatchRecord) => r.photo?.state === 'processing' ? 'Processing'
+  : r.status === 'Sent' ? `Sent${r.lastSentAt || r.sentAt ? ` ${shortDayLabel(r.lastSentAt || r.sentAt!)}` : ''}` : r.status;
 export function dayPriceFor(state: PrototypeState, speciesId: string, recordId = '', date?: string, site?: string) {
   const record = state.records.find(r => r.id === recordId);
   const targetDate = dayKey(date ?? record?.date ?? new Date());
@@ -159,6 +161,7 @@ export const recordFields = ['boatId', 'boatName', 'fisherId', 'vesselType', 'pr
 export function differences(original: CatchRecord, changed: CatchRecord): Omit<History, 'at' | 'reason'>[] {
   const changes: Omit<History, 'at' | 'reason'>[] = [];
   for (const key of recordFields) if (original[key] !== changed[key]) changes.push({ field: key === 'notes' ? 'Notes changed' : key, was: original[key] || 'No value yet', now: changed[key] || 'No value yet' });
+  if (!!original.noCatch !== !!changed.noCatch) changes.push({ field: 'No catch', was: original.noCatch ? 'Yes' : 'No', now: changed.noCatch ? 'Yes' : 'No' });
   const ids = [...new Set([...original.lines, ...changed.lines].map(l => l.id))];
   for (const lineId of ids) {
     const before = original.lines.find(l => l.id === lineId), after = changed.lines.find(l => l.id === lineId);
@@ -175,18 +178,19 @@ export function saveEdit(original: CatchRecord, working: CatchRecord, reason: st
   if (!changes.length) throw new Error('No changes to save.');
   if (!working.boatId || !validNumbers(working)) throw new Error('Choose a boat and check the numeric fields.');
   const at = new Date().toISOString();
-  const needsReview = original.status === 'Sent' || !!original.sentAt || !canSave(working) || needsCheck(working) > 0 || working.photo?.state === 'processing';
-  return { ...working, status: needsReview ? 'Needs review' : original.status, sentAt: undefined,
+  const needsReview = !canSave(working) || needsCheck(working) > 0 || working.photo?.state === 'processing';
+  return { ...working, status: needsReview ? 'Needs review' : original.status === 'Sent' || original.status === 'Needs review' || !!original.sentAt ? 'Saved' : original.status,
     editedAt: at, revision: original.revision + 1, history: [...original.history, ...changes.map(c => ({ ...c, at, reason }))] };
 }
 export function filterRecords(state: PrototypeState, filters = state.filters): CatchRecord[] {
-  const today = dayKey(), from = filters.days === 'custom' ? filters.from : filters.days === 'all' ? '' : dayKey(Date.now() - (Number(filters.days) - 1) * 86400000);
-  const to = filters.days === 'custom' ? filters.to : today;
+  const today = dayKey(), from = filters.days === 'custom' ? filters.from : filters.days === 'all' ? '' : filters.days === 'yesterday'
+    ? dayKey(Date.now() - 86400000) : dayKey(Date.now() - (Number(filters.days || 7) - 1) * 86400000);
+  const to = filters.days === 'custom' ? filters.to : filters.days === 'yesterday' ? from : today;
   return state.records.filter(r => {
     const day = dayKey(r.date), fisher = state.fishers.find(f => f.id === r.fisherId)?.name ?? '';
     return !r.deleted && (!from || day >= from) && (!to || day <= to) &&
       (!filters.boatId || r.boatId === filters.boatId) && (!filters.fisherId || r.fisherId === filters.fisherId) &&
-      (!filters.statuses.length || filters.statuses.includes(displayStatus(r) === 'Processing' ? r.status : displayStatus(r))) &&
+      (!filters.statuses.length || filters.statuses.some(status => status === 'Sent' ? displayStatus(r).startsWith('Sent') : status === (displayStatus(r) === 'Processing' ? r.status : displayStatus(r)))) &&
       (!filters.species.length || r.lines.some(l => filters.species.includes(l.speciesId))) &&
       `${r.boatName} ${fisher}`.toLowerCase().includes(filters.search.toLowerCase().trim());
   }).sort((a, b) => b.date.localeCompare(a.date));
@@ -201,22 +205,46 @@ export function dateRange(period: string, from = '', to = '', now = new Date()):
   return [dayKey(now.getTime() - (period === 'Last 4 weeks' ? 27 : 13) * 86400000), dayKey(now)];
 }
 export const validRange = (from: string, to: string) => /^\d{4}-\d{2}-\d{2}$/.test(from) && /^\d{4}-\d{2}-\d{2}$/.test(to) && !Number.isNaN(Date.parse(from)) && !Number.isNaN(Date.parse(to)) && from <= to && new Date(from).toISOString().slice(0, 10) === from && new Date(to).toISOString().slice(0, 10) === to;
-export function sendPreview(state: PrototypeState, from: string, to: string) {
+export function readyToSend(r: CatchRecord) {
+  return !r.deleted && r.status === 'Saved' && canSend(r) && (!r.lastSentAt || (!!r.editedAt && r.editedAt > r.lastSentAt));
+}
+export function sendPreview(state: PrototypeState, from: string, to: string, includeSent = false) {
   const inPeriod = state.records.filter(r => !r.deleted && dayKey(r.date) >= from && dayKey(r.date) <= to);
-  return { eligible: inPeriod.filter(r => r.status === 'Saved' && !r.sentAt && canSend(r)),
-    excluded: inPeriod.filter(r => r.status !== 'Saved' || !!r.sentAt || !canSend(r)) };
+  return { eligible: inPeriod.filter(r => readyToSend(r) || (includeSent && r.status === 'Sent' && canSend(r))),
+    excluded: inPeriod.filter(r => !readyToSend(r) && !(includeSent && r.status === 'Sent' && canSend(r))) };
 }
 export function simulateSend(state: PrototypeState, draft: SendDraft): { state: PrototypeState; attempt: Attempt } {
   const [from, to] = dateRange(draft.period, draft.from, draft.to);
   if (!validEmail(draft.email) || !validRange(from, to)) throw new Error('Check the email address and period.');
-  const preview = sendPreview(state, from, to);
+  const preview = sendPreview(state, from, to, draft.includeSent);
   if (!preview.eligible.length) throw new Error('No records to send in this period.');
   const at = new Date().toISOString();
   const attempt: Attempt = { id: id('send'), at, from, to, email: draft.email.trim(), message: draft.message,
-    recordIds: preview.eligible.map(r => r.id), state: state.settings.offline ? 'Waiting to send' : 'Sent' };
+    recordIds: preview.eligible.map(r => r.id), state: state.settings.offline ? 'Waiting to send' : state.settings.nextSendFails ? "Couldn't send" : 'Sent',
+    includeSent: !!draft.includeSent };
   return { attempt, state: { ...state, sendDraft: undefined, attempts: [attempt, ...state.attempts],
     recipients: draft.saveEmail ? [...new Set([...state.recipients, draft.email.trim()])] : state.recipients,
-    records: state.records.map(r => attempt.state === 'Sent' && attempt.recordIds.includes(r.id) ? { ...r, sentAt: at } : r) } };
+    settings: { ...state.settings, nextSendFails: false },
+    records: state.records.map(r => attempt.recordIds.includes(r.id) ? attempt.state === 'Sent'
+      ? { ...r, status: 'Sent', sentAt: at, lastSentAt: at, sentTo: draft.email.trim() }
+      : { ...r, status: attempt.state === 'Waiting to send' ? 'Waiting to send' : "Couldn't send" } : r) } };
+}
+export function resolveSendAttempt(state: PrototypeState, attemptId: string, action: 'retry' | 'cancel'): PrototypeState {
+  const attempt = state.attempts.find(item => item.id === attemptId);
+  if (!attempt || !['Waiting to send', "Couldn't send"].includes(attempt.state)) throw new Error('This send is no longer pending.');
+  const pending = state.records.filter(record => attempt.recordIds.includes(record.id) && !record.deleted
+    && ['Waiting to send', "Couldn't send"].includes(record.status));
+  const eligible = action === 'retry' ? pending.filter(canSend) : pending;
+  if (action === 'retry' && !eligible.length) throw new Error('No records in this batch are still ready.');
+  const at = new Date().toISOString();
+  const outcome: Attempt['state'] = action === 'cancel' ? 'Cancelled' : state.settings.offline ? 'Waiting to send' : state.settings.nextSendFails ? "Couldn't send" : 'Sent';
+  return { ...state, settings: { ...state.settings, nextSendFails: action === 'retry' ? false : state.settings.nextSendFails },
+    records: state.records.map(record => !eligible.some(item => item.id === record.id) ? record
+      : outcome === 'Cancelled' ? { ...record, status: canSend(record) ? 'Saved' : 'Needs review' }
+        : outcome === 'Sent' ? { ...record, status: 'Sent', sentAt: at, lastSentAt: at, sentTo: attempt.email }
+          : { ...record, status: outcome }),
+    attempts: state.attempts.map(item => item.id === attempt.id ? { ...item, at, state: outcome,
+      ...(action === 'retry' ? { recordIds: eligible.map(record => record.id) } : {}) } : item) };
 }
 export function applyUndo(state: PrototypeState, now = Date.now()): PrototypeState {
   const undo = state.undo;
@@ -242,22 +270,22 @@ export function applyUndo(state: PrototypeState, now = Date.now()): PrototypeSta
 }
 export function makeFixtures(): PrototypeState {
   const boats: Boat[] = [
-    { id: 'neema', name: 'Neema', vesselType: 'Mashua', propulsion: 'Outboard engine', horsepower: '15', length: '7', registration: '', crew: '4' },
-    { id: 'baraka', name: 'Baraka', vesselType: 'Ngalawa', propulsion: 'Paddle and sail', horsepower: '', length: '5', registration: '', crew: '2' },
-    { id: 'pili', name: 'Pili', vesselType: 'Hori', propulsion: 'Sail', horsepower: '', length: '9', registration: '', crew: '5' },
-    { id: 'faraja', name: 'Faraja', vesselType: 'Dau', propulsion: 'Sail', horsepower: '', length: '10', registration: '', crew: '6' },
-    { id: 'imani', name: 'Imani', vesselType: 'Mtumbwi', propulsion: 'Paddle', horsepower: '', length: '3', registration: '', crew: '1' },
+    { id: 'neema', name: 'Neema', vesselType: 'Mashua', propulsion: 'Outboard engine', horsepower: '15', length: '7', registration: 'KMFRI-241', crew: '4' },
+    { id: 'baraka', name: 'Baraka', vesselType: 'Ngalawa', propulsion: 'Paddle and sail', horsepower: '', length: '5', registration: 'KWL-118', crew: '2' },
+    { id: 'pili', name: 'Pili', vesselType: 'Hori', propulsion: 'Sail', horsepower: '', length: '9', registration: 'KWA-036', crew: '5' },
+    { id: 'faraja', name: 'Faraja', vesselType: 'Dau', propulsion: 'Sail', horsepower: '', length: '10', registration: 'KWM-078', crew: '6' },
+    { id: 'imani', name: 'Imani', vesselType: 'Mtumbwi', propulsion: 'Paddle', horsepower: '', length: '3', registration: 'KWM-092', crew: '1' },
   ];
-  const fishers: Fisher[] = ['Demo Amani', 'Demo Salama', 'Demo Juma', 'Demo Zawadi', 'Demo Bahati'].map((name, i) => ({ id: `fisher-${i}`, name, boatIds: [boats[i].id] }));
-  const statuses: Status[] = ['Saved', 'Needs review', 'Saved', 'Saved', 'Draft', 'Needs review', 'Needs review', 'Saved', 'Saved'];
+  const fishers: Fisher[] = ['Amani Bakari', 'Salama Juma', 'Juma Mwakio', 'Zawadi Masha', 'Bahati Kombo'].map((name, i) => ({ id: `fisher-${i}`, name, boatIds: [boats[i].id] }));
+  const statuses: Status[] = ['Saved', 'Needs review', 'Saved', 'Sent', 'Draft', 'Needs review', 'Needs review', 'Saved', 'Saved'];
   const records = statuses.map((status, index) => {
-    const r = selectBoat(blankRecord(), boats[index % 5]);
+    const r = selectBoat(blankRecord('Msambweni Landing Site'), boats[index % 5]);
     const date = new Date(Date.now() - Math.floor(index / 3) * 86400000 - index * 600000).toISOString();
-    return { ...r, id: `sample-${index}`, date, fisherId: fishers[index % 5].id, status, step: status === 'Draft' ? 3 : 5,
+    return { ...r, id: `sample-${index}`, date, timeIn: date, fisherId: fishers[index % 5].id, status, step: status === 'Draft' ? 3 : 5,
       sentAt: index === 3 ? date : undefined, gear: GEARS[index % GEARS.length],
       lines: [{ ...blankLine(index % 2 ? 'Mullets' : 'Rabbit fish', index === 8 ? '' : '300', date),
         id: `sample-line-${index}`, weight: index === 8 ? '' : String(8 + index), count: String(10 + index), checked: status !== 'Needs review' }],
-      notes: index === 8 ? 'Partial record: no measurements entered.' : 'Synthetic sample record.' };
+       notes: index === 8 ? 'Partial record: no measurements entered.' : '' };
   });
   const dayPrices: DayPrice[] = [];
   for (const record of [...records].sort((a, b) => b.date.localeCompare(a.date))) {
@@ -266,8 +294,9 @@ export function makeFixtures(): PrototypeState {
       dayPrices.push({ site: record.site, date: dayKey(record.date), speciesId: line.speciesId, price: line.price, setAt: record.date });
     }
   }
-  return { version: 1, revision: 0, records, boats, fishers, recipients: ['demo.recipient@example.com'], dayPrices,
-    settings: { collector: 'Demo collector', county: 'Demo county', site: 'Demo landing site', offline: true, failSaves: false, nextPhoto: 'A' },
-    filters: emptyFilters(), attempts: [{ id: 'sample-send', at: records[3].date, from: dayKey(Date.now() - 13 * 86400000), to: dayKey(), email: 'demo.recipient@example.com', message: '', recordIds: [records[3].id], state: 'Sent' }],
-    schedule: { enabled: false, frequency: 'Every 2 weeks', weeks: '2', email: 'demo.recipient@example.com', firstDate: dayKey(Date.now() + 86400000) } };
+  records[3] = { ...records[3], lastSentAt: records[3].date, sentTo: 'records@msambwenibmu.co.ke' };
+  return { version: 2, revision: 0, records, boats, fishers, recipients: ['records@msambwenibmu.co.ke'], dayPrices,
+    settings: { collector: 'Asha Mwakio', county: 'Kwale', site: 'Msambweni Landing Site', offline: true, failSaves: false, nextPhoto: 'A', nextSendFails: false, introSeen: false },
+    filters: emptyFilters(), attempts: [{ id: 'sample-send', at: records[3].date, from: dayKey(Date.now() - 13 * 86400000), to: dayKey(), email: 'records@msambwenibmu.co.ke', message: '', recordIds: [records[3].id], state: 'Sent' }],
+    schedule: { enabled: false, frequency: 'Every 2 weeks', weeks: '2', email: 'records@msambwenibmu.co.ke', firstDate: dayKey(Date.now() + 86400000) } };
 }

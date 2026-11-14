@@ -15,7 +15,8 @@ test('full catalog and internally consistent sample states', () => {
   const state = M.makeFixtures();
   assert.equal(state.boats.length, 5);
   assert.equal(M.SPECIES.length, 44);
-  assert.deepEqual(new Set(state.records.map(M.displayStatus)), new Set(['Saved', 'Needs review', 'Sent', 'Draft']));
+  assert.deepEqual(new Set(state.records.map(r => M.displayStatus(r).startsWith('Sent') ? 'Sent' : M.displayStatus(r))), new Set(['Saved', 'Needs review', 'Sent', 'Draft']));
+  assert.equal(state.version, 2);
   assert.equal(state.records.filter(r => r.status === 'Needs review').length, 3);
   assert.equal(M.recordCount(0), 'No records');
   assert.equal(M.recordCount(1), '1 record');
@@ -96,13 +97,22 @@ test('edits require reasons, label note history and demote sent records', () => 
   assert.throws(() => M.saveEdit(r, working, ''), /reason/);
   assert.throws(() => M.saveEdit(r, r, 'Wrong weight'), /No changes/);
   const edited = M.saveEdit(r, working, 'Wrong weight');
-  assert.equal(edited.status, 'Needs review');
+  assert.equal(edited.status, 'Saved');
   assert.equal(edited.history.at(-1).was, '14');
   assert.equal(edited.history.at(-1).now, '12');
   assert.equal(edited.history.at(-1).reason, 'Wrong weight');
   assert.equal(M.saveEdit({ ...savedRecord(), notes: 'Old note' }, { ...savedRecord(), notes: 'New note' }, 'Missing information').history.at(-1).field, 'Notes changed');
-  assert.equal(M.saveEdit({ ...r, status: 'Saved', sentAt: r.date }, working, 'Wrong weight').status, 'Needs review');
+  assert.equal(M.saveEdit({ ...r, status: 'Saved', sentAt: r.date }, working, 'Wrong weight').status, 'Saved');
   assert.equal(M.saveEdit({ ...r, status: 'Saved', sentAt: undefined }, working, 'Wrong weight').status, 'Saved');
+});
+test('no-catch edits are audited, landing timestamps are consistent, and deleted records are never ready', () => {
+  const state = M.makeFixtures(), record = state.records[0];
+  const updated = M.saveEdit(record, { ...record, noCatch: true, lines: [] }, 'Missing information');
+  assert.ok(updated.history.some(item => item.field === 'No catch' && item.now === 'Yes'));
+  assert.equal(M.readyToSend({ ...record, deleted: true }), false);
+  assert.ok(state.records.every(item => M.dayKey(item.date) === M.dayKey(item.timeIn)));
+  const blank = M.blankRecord();
+  assert.equal(M.dayKey(blank.date), M.dayKey(blank.timeIn));
 });
 test('filters persist semantics and distinguish visible Sent from Saved', () => {
   const state = M.makeFixtures();
@@ -125,7 +135,7 @@ test('periods/emails and eligible exclusions are precise', () => {
   const preview = M.sendPreview(state, from, to);
   assert.equal(preview.eligible.length, 4);
   assert.equal(preview.excluded.length, 5);
-  assert.ok(preview.eligible.every(r => r.status === 'Saved' && !r.sentAt));
+  assert.ok(preview.eligible.every(M.readyToSend));
   state.records[0].deleted = true;
   assert.equal(M.sendPreview(state, from, to).eligible.length, 3);
 });
@@ -134,14 +144,32 @@ test('one-off send is local-only; offline queue has no automatic dispatch', () =
   const draft = { step: 3, period: 'Last 2 weeks', from: '', to: '', email: 'new@example.com', saveEmail: true, message: 'Demo' };
   const waiting = M.simulateSend(state, draft);
   assert.equal(waiting.attempt.state, 'Waiting to send');
+  assert.ok(waiting.state.records.filter(r => waiting.attempt.recordIds.includes(r.id)).every(r => r.status === 'Waiting to send'));
   assert.ok(waiting.state.recipients.includes(draft.email));
   assert.equal(waiting.state.records.filter(r => r.sentAt).length, 1);
   const online = M.simulateSend({ ...state, settings: { ...state.settings, offline: false } }, draft);
   assert.equal(online.attempt.state, 'Sent');
-  assert.ok(online.state.records.filter(r => online.attempt.recordIds.includes(r.id)).every(r => !!r.sentAt));
+  assert.ok(online.state.records.filter(r => online.attempt.recordIds.includes(r.id)).every(r => r.status === 'Sent' && !!r.lastSentAt));
+  const failed = M.simulateSend({ ...state, settings: { ...state.settings, offline: false, nextSendFails: true } }, draft);
+  assert.equal(failed.attempt.state, "Couldn't send");
+  assert.ok(failed.state.records.filter(r => failed.attempt.recordIds.includes(r.id)).every(r => r.status === "Couldn't send"));
   assert.deepEqual(state.schedule, online.state.schedule);
   assert.throws(() => M.simulateSend(state, { ...draft, email: 'bad' }), /email/);
   assert.throws(() => M.simulateSend({ ...state, records: [] }, draft), /No records/);
+});
+test('pending send retry and cancellation preserve newer record states', () => {
+  const state = M.makeFixtures();
+  const draft = { period: 'Last 4 weeks', from: '', to: '', email: 'practice@example.com', saveEmail: false, message: '' };
+  const queued = M.simulateSend({ ...state, settings: { ...state.settings, offline: true } }, draft);
+  const changedId = queued.attempt.recordIds[0];
+  const changed = { ...queued.state, records: queued.state.records.map(record => record.id === changedId ? { ...record, status: 'Needs review' } : record) };
+  const cancelled = M.resolveSendAttempt(changed, queued.attempt.id, 'cancel');
+  assert.equal(cancelled.records.find(record => record.id === changedId).status, 'Needs review');
+  assert.equal(cancelled.attempts[0].state, 'Cancelled');
+  const failed = M.simulateSend({ ...state, settings: { ...state.settings, offline: false, nextSendFails: true } }, draft);
+  const retried = M.resolveSendAttempt(failed.state, failed.attempt.id, 'retry');
+  assert.equal(retried.attempts[0].state, 'Sent');
+  assert.ok(retried.records.filter(record => failed.attempt.recordIds.includes(record.id)).every(record => record.lastSentAt));
 });
 test('Undo restores edit/delete values and keeps audit history; expires at 10 seconds', () => {
   const state = M.makeFixtures(), original = state.records[0];
@@ -192,7 +220,7 @@ test('failed writes reject, keep durable state, and later retries recover', asyn
   const storage = createLocalStorage({ getItem: async () => raw, setItem: async (_, v) => { raw = v; } });
   const initial = M.makeFixtures();
   await storage.write(initial);
-  await assert.rejects(storage.write({ ...initial, revision: 1, settings: { ...initial.settings, failSaves: true } }), /failure/);
+  await assert.rejects(storage.write({ ...initial, revision: 1, settings: { ...initial.settings, failSaves: true } }), /Local save failed/);
   assert.equal((await storage.read()).revision, 0);
   await storage.write({ ...initial, revision: 2 });
   assert.equal((await storage.read()).revision, 2);
@@ -208,6 +236,7 @@ test('legacy Approved prototype data loads as Saved without changing legacy stor
 });
 test('older local records gain site, no-catch, price-source and day-price data safely', async () => {
   const state = M.makeFixtures();
+  state.version = 1;
   delete state.dayPrices;
   delete state.records[0].site;
   delete state.records[0].noCatch;

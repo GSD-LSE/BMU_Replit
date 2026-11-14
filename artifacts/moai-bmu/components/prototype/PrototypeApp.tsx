@@ -3,10 +3,12 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { PrototypeProvider, usePrototype } from '@/lib/prototype/store';
-import { blankRecord, dateRange, dayLabel, displayStatus, emptyFilters, filterRecords, recordCount, timeLabel, type CatchRecord } from '@/lib/prototype/model';
+import { blankRecord, dayLabel, displayStatus, emptyFilters, filterRecords, readyToSend, recordCount, timeLabel, type CatchRecord } from '@/lib/prototype/model';
 import AddWizard from './AddWizard';
 import { EditRecord, HistoryScreen, RecordDetail, RecordList, RecordRow } from './Records';
-import { ScheduleScreen, SendWizard, SettingsPage, SettingsScreen, initialSend } from './SendSettings';
+import { ScheduleScreen } from './ScheduleFlow';
+import { SettingsPage, SettingsScreen } from './SettingsFlow';
+import { SendWizard, makeSendDraft } from './SendFlow';
 import { MotionFrame, MotionPrefsProvider, type MotionDirection } from './motion';
 import { Btn, C, Heading, Notice, Shell, Txt, s } from './ui';
 
@@ -53,12 +55,12 @@ function PrototypeScreens() {
   };
   const history = (r: CatchRecord, back: string) => { setSelectedId(r.id); setHistoryBack(back); navigate('History'); };
   const send = async () => {
-    if (!data.sendDraft) await change(s => ({ ...s, sendDraft: { ...initialSend(), email: s.recipients[0] ?? '' } }));
+    if (!data.sendDraft) await change(s => ({ ...s, sendDraft: makeSendDraft(s.recipients.at(-1) ?? '') }));
     navigate('Send');
   };
   const openSetting = (name: string) => {
     if (name === 'Automatic sending') { setScheduleBack('Settings'); navigate('Schedule'); }
-    else { setSettingsPage(name); navigate('SettingsPage'); }
+    else { setHistoryBack('Settings'); setSettingsPage(name); navigate('SettingsPage'); }
   };
   const home = () => navigate('Home');
   if (screen === 'Wizard' && selected) return frame(<AddWizard recordId={selected.id} onHome={home} onNextRecord={id => setSelectedId(id)} />);
@@ -67,16 +69,18 @@ function PrototypeScreens() {
   if (screen === 'History' && selected) return frame(<HistoryScreen r={selected} onBack={() => navigate(historyBack)} />);
   if (screen === 'Records' || screen === 'Edit') return frame(<RecordList onTab={navigate} onOpen={open} onEdit={r => { void edit(r); }} onResume={r => { void resume(r); }} onResumeEdit={() => navigate('Edit')} />);
   if (screen === 'Settings') return frame(<SettingsScreen onTab={navigate} onOpen={openSetting} />);
-  if (screen === 'SettingsPage') return frame(<SettingsPage key={settingsPage} name={settingsPage} onBack={() => navigate('Settings')} />);
+  if (screen === 'SettingsPage') return frame(<SettingsPage key={settingsPage} name={settingsPage} onBack={() => navigate(historyBack === 'Send' ? 'Send' : 'Settings')} />);
   if (screen === 'Schedule') return frame(<ScheduleScreen onBack={() => navigate(scheduleBack)} />);
-  if (screen === 'Send') return frame(<SendWizard onHome={home} onSchedule={() => { setScheduleBack('Home'); navigate('Schedule'); }} onReview={async () => {
-    const draft = data.sendDraft ?? initialSend();
-    const [from, to] = dateRange(draft.period, draft.from, draft.to);
-    await change(s => ({ ...s, filters: { ...emptyFilters(), days: 'custom', from, to, statuses: ['Needs review'] } }));
+  if (screen === 'Send') return frame(<SendWizard onHome={home} onSchedule={() => { setScheduleBack('Send'); navigate('Schedule'); }}
+    onHistory={() => { setSettingsPage('Send history'); setHistoryBack('Send'); navigate('SettingsPage'); }} onReview={async () => {
+    const draft = data.sendDraft ?? makeSendDraft();
+     await change(s => ({ ...s, filters: { ...emptyFilters(), days: 'all', statuses: ['Needs review'] } }));
     navigate('Records');
   }} />);
   const records = data.records.filter(r => !r.deleted).sort((a, b) => b.date.localeCompare(a.date));
   const reviewCount = filterRecords(data, { ...emptyFilters(), days: 'all', statuses: ['Needs review'] }).length;
+  const readyCount = records.filter(readyToSend).length;
+  const lastAttempt = data.attempts.find(a => a.state === 'Sent');
   const bannerRecord = data.banner ? data.records.find(r => r.id === data.banner?.recordId) : undefined;
   const dismissBanner = () => { void change(s => ({ ...s, banner: undefined })); };
   const addRecord = () => { void start(); };
@@ -84,8 +88,12 @@ function PrototypeScreens() {
     await change(s => ({ ...s, filters: { ...emptyFilters(), days: 'all', statuses: ['Needs review'] } }));
     navigate('Records');
   };
-  return frame(<Shell title="Home" subtitle={`${data.settings.site || 'Demo landing site'} · ${dayLabel(new Date().toISOString())}`}
+  return frame(<Shell title="Home" subtitle={`${data.settings.site || 'Msambweni Landing Site'} · ${dayLabel(new Date().toISOString())}`}
     tab="Home" onTab={navigate} offline={data.settings.offline} offlineCompact>
+    {!data.settings.introSeen ? <Notice>
+      <View style={{ flex: 1, gap: 8 }}><Txt bold>Practice app with sample data. Nothing will be sent.</Txt>
+        <Btn label="Continue" kind="secondary" onPress={() => { void change(s => ({ ...s, settings: { ...s.settings, introSeen: true } })); }} /></View>
+    </Notice> : null}
     {!records.length ? <>
       <Btn label="Add record" icon="plus" large onPress={addRecord} />
       <Txt>No records yet. Add the first record.</Txt>
@@ -93,8 +101,8 @@ function PrototypeScreens() {
       {data.banner && saved && bannerRecord ? <Animated.View entering={FadeIn.duration(150)} exiting={FadeOut.duration(100)} style={s.savedConfirmation}>
         <Feather name={bannerRecord.status === 'Needs review' ? 'alert-circle' : 'check-circle'}
           size={20} color={bannerRecord.status === 'Needs review' ? C.warning : C.primary} />
-        <Text numberOfLines={1} style={[s.compactRecordTitle, s.savedConfirmationText]}>
-          {bannerRecord.status === 'Needs review' ? 'Saved as Needs review' : 'Saved'}: {bannerRecord.boatName}, {timeLabel(bannerRecord.date)}
+        <Text numberOfLines={1} style={[s.compactRecordTitle, s.savedConfirmationText, { fontSize: 14 }]}>
+          {data.banner.text}
         </Text>
         <Pressable accessibilityRole="button" accessibilityLabel={`${bannerRecord.status === 'Needs review' ? 'Review' : 'Edit'} saved record`}
           onPress={() => bannerRecord.status === 'Needs review' ? void resume(bannerRecord) : void edit(bannerRecord)} style={s.confirmAction}>
@@ -104,16 +112,22 @@ function PrototypeScreens() {
           onPress={dismissBanner} style={s.iconButton}><Feather name="x" size={22} color={C.foreground} /></Pressable>
       </Animated.View> : null}
       <Btn label="Add record" icon="plus" large onPress={addRecord} />
-      {reviewCount ? <Pressable accessibilityRole="button" accessibilityLabel={`${recordCount(reviewCount)} need review`}
-        testID="home-review" onPress={() => { void reviewRecords(); }} style={s.reviewRow}>
-        <Feather name="alert-circle" size={21} color={C.warning} />
-        <Text style={[s.compactRecordTitle, { flex: 1 }]}>{recordCount(reviewCount)} need review</Text>
-        <Feather name="chevron-right" size={21} color={C.foreground} />
-      </Pressable> : null}
-      <Btn label="Send data" kind="secondary" icon="send" large onPress={() => { void send(); }} />
+      <View style={s.sinceSendCard}>
+        <View style={s.sinceSendTop}><Text style={s.sinceSendTitle}>Since last send</Text>
+          <Text style={s.sinceSendMeta}>{lastAttempt ? `Last sent ${dayLabel(lastAttempt.at)}` : 'Not sent yet'}</Text></View>
+        {reviewCount ? <Pressable accessibilityRole="button" accessibilityLabel={`${recordCount(reviewCount)} need review`}
+          testID="home-review" onPress={() => { void reviewRecords(); }} style={s.sinceSendReview}>
+          <Feather name="alert-circle" size={20} color={C.warning} /><Text style={[s.compactRecordTitle, { flex: 1 }]}>{recordCount(reviewCount)} need review</Text><Feather name="chevron-right" size={20} color={C.foreground} />
+        </Pressable> : null}
+        <View style={s.sinceSendReady}><View style={{ flex: 1 }}><Text style={s.sinceSendCount}>{readyCount ? `${recordCount(readyCount)} ready to send` : 'Nothing to send'}</Text>
+          {!readyCount ? <Txt small muted>All records sent.</Txt> : null}</View>
+          {readyCount ? <Btn label={`Send ${readyCount} ${readyCount === 1 ? 'record' : 'records'}`} kind="secondary" icon="send" onPress={() => { void send(); }} /> : null}
+        </View>
+        {data.schedule.enabled ? <Txt small muted>Sends automatically every {data.schedule.weeks} weeks. Next: {dayLabel(data.schedule.firstDate + 'T12:00:00')}</Txt> : null}
+      </View>
       <Heading>Recent</Heading>
-      {records.slice(0, 3).map(r => <RecordRow key={r.id} r={r} onOpen={() => open(r)}
-        onEdit={() => r.status === 'Needs review' ? void resume(r) : void edit(r)} />)}
+      <View style={{ gap: 8 }}>{records.slice(0, 3).map(r => <RecordRow key={r.id} r={r} onOpen={() => open(r)}
+        onEdit={() => r.status === 'Needs review' ? void resume(r) : void edit(r)} />)}</View>
       <Btn label="See all records" kind="quiet" onPress={() => navigate('Records')} />
     </>}
   </Shell>);

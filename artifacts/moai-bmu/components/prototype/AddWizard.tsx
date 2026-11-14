@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import Animated, { FadeIn, FadeInLeft, FadeInRight, FadeOut, FadeOutLeft, FadeOutRight } from 'react-native-reanimated';
 import { usePrototype } from '@/lib/prototype/store';
-import { blankRecord, canSave, needsCheck, setDayPrice, speciesName, totals, validNumbers, timeLabel, type CatchRecord } from '@/lib/prototype/model';
+import { blankRecord, canSave, needsCheck, readyToSend, recordCount, setDayPrice, speciesName, totals, validNumbers, timeLabel, type CatchRecord } from '@/lib/prototype/model';
 import { BoatDetails, BoatFields, GearTrip, BOAT_DETAIL_FIELDS } from './RecordFields';
 import { CatchReview } from './CatchReview';
 import { configureLayoutMotion, useMotionPrefs } from './motion';
@@ -18,12 +19,16 @@ export function updateSavedBoat(state: NonNullable<ReturnType<typeof usePrototyp
 }
 export default function AddWizard({ recordId, onHome, onNextRecord }: { recordId: string; onHome: () => void; onNextRecord: (id: string) => void }) {
   const { data, change, saved, error } = usePrototype();
-  const [exit, setExit] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [stepDirection, setStepDirection] = useState<'forward' | 'back'>('forward');
   const reduceMotion = useMotionPrefs();
+  const previousRecordId = useRef(recordId);
+  const freshRecord = previousRecordId.current !== recordId;
+  useEffect(() => { previousRecordId.current = recordId; }, [recordId]);
   const r = data?.records.find(r => r.id === recordId);
   if (!data || !r) return null;
+  const hasDraftContent = !!(r.boatId || r.fisherId || r.vesselType || r.gear || r.lines.length || r.photo || r.notes || r.area || r.timeOut || r.fad);
   const patch = (patch: Partial<CatchRecord>) => { void change(s => ({
     ...s, records: s.records.map(old => old.id === r.id ? { ...old, ...patch, revision: old.revision + 1 } : old),
   })); };
@@ -47,7 +52,8 @@ export default function AddWizard({ recordId, onHome, onNextRecord }: { recordId
     setBusy(true);
     const status = mode === 'later' || needsCheck(r) > 0 || r.photo?.state === 'processing' ? 'Needs review' : 'Saved';
     const fresh = mode === 'next' ? blankRecord(data.settings.site) : null;
-    const text = `${status === 'Saved' ? 'Record saved' : 'Saved for review'}: ${r.boatName}, ${timeLabel(new Date().toISOString())}`;
+    const readyCount = data.records.filter(record => record.id !== r.id && readyToSend(record)).length + (status === 'Saved' ? 1 : 0);
+    const text = status === 'Saved' ? `Saved. ${recordCount(readyCount)} ready to send.` : `Saved as Needs review: ${r.boatName}, ${timeLabel(r.date)}`;
     configureLayoutMotion(reduceMotion);
     const ok = await change(s => ({ ...s, boats: updateSavedBoat(s, r), records: [
       ...(fresh ? [fresh] : []), ...s.records.map(old => old.id === r.id ? { ...old, status, step: 5, revision: old.revision + 1 } as CatchRecord : old)],
@@ -57,7 +63,7 @@ export default function AddWizard({ recordId, onHome, onNextRecord }: { recordId
   };
   const takePhoto = () => {
     const scenario = data.settings.nextPhoto;
-    void change(s => ({ ...s, settings: { ...s.settings, nextPhoto: scenario === 'A' ? 'B' : scenario === 'B' ? 'C' : 'A' },
+    void change(s => ({ ...s,
       records: s.records.map(old => old.id === r.id ? { ...old, photo: { scenario, state: 'preview' } } : old) }));
   };
   const retakePhoto = () => {
@@ -78,14 +84,19 @@ export default function AddWizard({ recordId, onHome, onNextRecord }: { recordId
     if (ok) setTimeout(onHome, reduceMotion ? 100 : 110);
     return ok;
   };
-  const stepEntering = reduceMotion ? FadeIn.duration(100) : stepDirection === 'forward' ? FadeInRight.duration(220) : FadeInLeft.duration(180);
-  const stepExiting = reduceMotion ? FadeOut.duration(100) : stepDirection === 'forward' ? FadeOutLeft.duration(180) : FadeOutRight.duration(180);
-  const footer = step < 5 ? <ActionBar
-    secondary={<Btn label={step === 1 ? 'Back' : 'Previous step'} kind="secondary" onPress={() => step === 1 ? setExit(true) : changeStep(step - 1)} />}
-    primary={step < 4 ? <Btn label={`Next: ${['', 'Boat details', 'Gear and trip', 'Photo'][step]}`}
+  const backFromWizard = async () => {
+    if (step > 1) { changeStep(step - 1); return; }
+    configureLayoutMotion(reduceMotion);
+    if (hasDraftContent) await change(s => ({ ...s, banner: { text: 'Draft saved in Records', recordId: r.id } }));
+    else await change(s => ({ ...s, records: s.records.map(old => old.id === r.id ? { ...old, deleted: true, revision: old.revision + 1 } : old) }));
+    onHome();
+  };
+  const stepEntering = reduceMotion ? FadeIn.duration(100) : freshRecord ? FadeIn.duration(150) : stepDirection === 'forward' ? FadeInRight.duration(220) : FadeInLeft.duration(180);
+  const stepExiting = reduceMotion ? FadeOut.duration(100) : freshRecord ? FadeOut.duration(150) : stepDirection === 'forward' ? FadeOutLeft.duration(180) : FadeOutRight.duration(180);
+  const footer = step === 4 ? undefined : step < 5 ? <Btn label={`Next: ${['', 'Boat details', 'Gear and trip', 'Photo', 'Check catch'][step]}`}
       disabled={(step === 1 && !r.boatId) || !validNumbers(r)}
       disabledReason={step === 1 && !r.boatId ? 'Choose a boat to continue.' : !validNumbers(r) ? 'Check the numeric fields.' : undefined}
-      onPress={() => { void moveNext(); }} /> : undefined} /> : (() => {
+      onPress={() => { void moveNext(); }} /> : (() => {
     const t = totals(r.lines);
     const speciesCount = new Set(r.lines.map(line => line.speciesId)).size;
     const summary = [
@@ -98,21 +109,23 @@ export default function AddWizard({ recordId, onHome, onNextRecord }: { recordId
       : r.photo?.state === 'processing' ? 'Saved as Needs review: photo still being read' : '';
     return <View style={{ gap: 8 }}>
       {summary ? <Txt bold>{summary}</Txt> : null}
-      {reviewHint ? <Txt small muted>{reviewHint}</Txt> : null}
+      {reviewHint ? <Txt small muted>{reviewHint}</Txt> : <Txt small muted>Saves as Saved</Txt>}
       <Btn label={busy ? 'Saving…' : 'Save record'} disabled={!canSave(r) || busy}
         disabledReason={!r.boatId ? 'Choose a boat to continue.' : !validNumbers(r) ? 'Check the numeric fields.' : undefined}
         onPress={() => { void save('save'); }} />
       <ActionBar secondary={<Btn label="Save for later" kind="secondary" disabled={!r.boatId || !validNumbers(r) || busy}
         disabledReason={!r.boatId ? 'Choose a boat to continue.' : !validNumbers(r) ? 'Check the numeric fields.' : undefined}
         onPress={() => { void save('later'); }} />}
-        primary={<Btn label="Save and add next" disabled={!r.boatId || !validNumbers(r) || busy}
+        primary={<Btn label="Save and add next" kind="secondary" disabled={!r.boatId || !validNumbers(r) || busy}
           disabledReason={!r.boatId ? 'Choose a boat to continue.' : !validNumbers(r) ? 'Check the numeric fields.' : undefined}
-          onPress={() => { void save('next'); }} />} />
+           onPress={() => { void save('next'); }} />} />
+      <Txt small muted>Save for later saves as Needs review.</Txt>
     </View>;
   })();
-  return <Shell title={r.status === 'Needs review' ? 'Check catch' : 'Add record'} offline={data.settings.offline} scrollKey={`${r.id}-${step}`}
+  return <Shell title={r.status === 'Needs review' ? 'Check catch' : 'Add record'} offline={data.settings.offline} offlineCompact scrollKey={`${r.id}-${step}`}
     saved={error ? 'Not saved' : saved ? 'Saved on this phone' : 'Saving…'}
-    back={() => step > 1 ? changeStep(step - 1) : setExit(true)} footer={footer}>
+    back={() => { void backFromWizard(); }} footer={footer}
+    headerRight={<Pressable accessibilityRole="button" accessibilityLabel="Record options" onPress={() => setMenuOpen(true)} style={s.iconButton}><Feather name="more-horizontal" size={23} color={C.foreground} /></Pressable>}>
     <Txt bold>Step {step} of 5 · {['Boat', 'Boat details', 'Gear and trip', 'Photo', 'Check catch'][step - 1]}</Txt>
     {step === 1 && data.banner && saved ? <Notice>{data.banner.text}</Notice> : null}
     <View style={s.row}>{[1, 2, 3, 4, 5].map(n => <View key={n} style={[s.segment, { overflow: 'hidden' }]}>
@@ -124,11 +137,8 @@ export default function AddWizard({ recordId, onHome, onNextRecord }: { recordId
     {step === 2 ? <BoatDetails r={r} onChange={patch} /> : null}
     {step === 3 ? <GearTrip r={r} onChange={patch} /> : null}
     {step === 4 ? <>
-      <Heading>Add a photo</Heading><Txt>Lay the catch out so all fish are visible.</Txt>
-      <Notice>Take a photo of the catch so the species and weights can be checked.</Notice>
-      <Choices label="Next prepared photo" value={data.settings.nextPhoto} options={['A', 'B', 'C', 'Error']} onChange={v => { void change(s => ({ ...s, settings: { ...s.settings, nextPhoto: v as typeof s.settings.nextPhoto } })); }} />
-      <Txt>A: 8 species · B: 30-second read · C: no results · Error: failed reading</Txt>
-      <Btn label="Take photo" icon="camera" onPress={takePhoto} />
+      <Txt>Lay the catch out so all fish are visible.</Txt>
+      {!r.photo || r.photo.state === 'cancelled' ? <Btn label="Take photo" icon="camera" onPress={takePhoto} /> : null}
       {r.photo?.state === 'preview' ? <>
         <Image source={require('../../assets/images/demo-rabbitfish.jpg')} style={{ width: '100%', height: 210, borderRadius: 16 }} resizeMode="cover" />
         <Txt>Photo added</Txt>
@@ -140,14 +150,8 @@ export default function AddWizard({ recordId, onHome, onNextRecord }: { recordId
     {step === 5 ? <CatchReview key={r.id} r={r} onChange={patch} onRemove={removeLine} onSetDailyPrice={setDailyPrice}
       onRetakePhoto={retakePhoto} /> : null}
     </Animated.View>
-    {exit ? <Overlay title="Keep this draft?" variant="dialog" onClose={() => setExit(false)}>
-      <Txt>Back never clears your entries. Keep the draft to resume from Records.</Txt>
-      <ActionBar variant="stacked" primary={<Btn label="Keep draft" closeOnPress onPress={async () => {
-        const ok = await change(s => ({ ...s }));
-        if (ok) setTimeout(onHome, reduceMotion ? 100 : 110);
-        return ok;
-      }} />}
-        danger={<Btn label="Discard draft" kind="danger" closeOnPress onPress={discardDraft} />} />
+    {menuOpen ? <Overlay title="Record options" onClose={() => setMenuOpen(false)}>
+      <Btn label="Discard draft" kind="danger" closeOnPress onPress={discardDraft} />
     </Overlay> : null}
   </Shell>;
 }

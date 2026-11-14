@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Image, Keyboard, Pressable, Text, TextInput, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { usePrototype } from '@/lib/prototype/store';
 import { configureLayoutMotion, useMotionPrefs } from './motion';
@@ -24,11 +25,11 @@ export function SpeciesPicker({ record, onSelect, onClose }: {
     .flatMap(r => r.lines.map(l => l.speciesId)))].sort((a, b) => a === 'Mixed demersals' ? -1 : b === 'Mixed demersals' ? 1 : 0);
   const found = SPECIES.filter(sp => `${sp.common} ${sp.local}`.toLowerCase().includes(query.toLowerCase()));
   const groups = ['Demersal', 'Pelagic', 'Other invertebrates', 'Crustaceans'];
-  return <Overlay title="Add species" onClose={onClose}>
+  return <Overlay title="Add species" variant="page" onClose={onClose}>
     <Field label="Search species" placeholder="Search species" value={query} onChange={setQuery} />
     {seen.length ? <>
       <Heading>Seen today</Heading>
-      <View style={s.wrap}>{seen.map(id => <Btn key={id} label={speciesName(id)} kind="secondary" closeOnPress onPress={() => onSelect(id)} />)}</View>
+      <View style={s.wrap}>{seen.filter(id => found.some(item => item.id === id)).map(id => <Btn key={id} label={speciesName(id)} kind="secondary" closeOnPress onPress={() => onSelect(id)} />)}</View>
     </> : null}
     {groups.map(group => {
       const species = found.filter(sp => sp.group === group && !seen.includes(sp.id));
@@ -165,7 +166,7 @@ function CatchLineRow({ line, record, original, lines, open, weightRefs, onToggl
         return <Pressable key={candidate.id} accessibilityRole="checkbox" accessibilityState={{ checked }}
           onPress={() => setSelectedRecords(list => checked ? list.filter(id => id !== candidate.id) : [...list, candidate.id])}
           style={[s.choice, { alignItems: 'flex-start' }]}>
-          <Text style={s.choiceIcon}>{checked ? '☑' : '□'}</Text>
+          <Feather name={checked ? 'check-square' : 'square'} size={20} color={C.foreground} />
           <View><Txt bold>{candidate.boatName} · {fisher}</Txt><Txt small muted>{old?.price ? `${money(Number(old.price))}/kg` : 'No price yet'} → {money(Number(line.price))}/kg</Txt></View>
         </Pressable>;
       })}
@@ -264,7 +265,7 @@ export function CatchReview({ r, onChange, onRemove, onSetDailyPrice, onRetakePh
     </View> : null}
     {r.photo?.state === 'ready' ? <View style={s.row}>
       <Txt small muted>{r.lines.filter(line => line.origin === 'photo').length + r.suggestions.length} species from photo</Txt>
-      {uncertainLines.length ? <Text style={s.uncertainText}>● {uncertainLines.length} to check</Text> : null}
+       {uncertainLines.length ? <View style={s.row}><View style={s.uncertainDot} /><Text style={s.uncertainText}>{uncertainLines.length} to check</Text></View> : null}
     </View> : null}
     {r.photo?.state === 'processing' ? <Notice>Photo reading can continue while you add species. Saving now keeps this record in review.</Notice> : null}
     {r.noCatch ? <Notice>No catch recorded for this fisher.</Notice> : null}
@@ -293,7 +294,7 @@ export function CatchReview({ r, onChange, onRemove, onSetDailyPrice, onRetakePh
       {!r.lines.length && !r.photo ? <Pressable accessibilityRole="checkbox" accessibilityLabel="No catch from this fisher"
         accessibilityState={{ checked: r.noCatch }} onPress={() => onChange({ noCatch: !r.noCatch })}
         style={[s.choice, r.noCatch && { backgroundColor: C.seaGlass, borderColor: C.primary, borderWidth: 2 }]}>
-        <Text style={s.choiceIcon}>{r.noCatch ? '☑' : '□'}</Text><Txt>No catch from this fisher</Txt>
+         <Feather name={r.noCatch ? 'check-square' : 'square'} size={20} color={C.foreground} /><Txt>No catch from this fisher</Txt>
       </Pressable> : null}
     </>
     {showNotes ? <>
