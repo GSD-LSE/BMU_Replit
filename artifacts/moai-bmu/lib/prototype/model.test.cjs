@@ -9,6 +9,7 @@ require.extensions['.ts'] = (module, filename) => {
 };
 const M = require('./model.ts');
 const { createLocalStorage } = require('./storage.ts');
+const T = require('./trends-model.ts');
 const savedRecord = () => ({ ...M.selectBoat(M.blankRecord(), M.makeFixtures().boats[0]), status: 'Saved' });
 
 test('full catalog and internally consistent sample states', () => {
@@ -17,7 +18,7 @@ test('full catalog and internally consistent sample states', () => {
   assert.equal(M.SPECIES.length, 44);
   assert.deepEqual(new Set(state.records.map(r => M.displayStatus(r).startsWith('Sent') ? 'Sent' : M.displayStatus(r))), new Set(['Saved', 'Needs review', 'Sent', 'Draft']));
   assert.equal(state.version, 2);
-  assert.equal(state.records.filter(r => r.status === 'Needs review').length, 3);
+  assert.equal(state.records.filter(r => r.status === 'Needs review').length, 6);
   assert.equal(M.recordCount(0), 'No records');
   assert.equal(M.recordCount(1), '1 record');
   assert.equal(M.recordCount(4), '4 records');
@@ -134,7 +135,7 @@ test('periods/emails and eligible exclusions are precise', () => {
   assert.equal(M.validEmail('name@example.com'), true);
   const preview = M.sendPreview(state, from, to);
   assert.equal(preview.eligible.length, 4);
-  assert.equal(preview.excluded.length, 5);
+  assert.equal(preview.excluded.length, 8);
   assert.ok(preview.eligible.every(M.readyToSend));
   state.records[0].deleted = true;
   assert.equal(M.sendPreview(state, from, to).eligible.length, 3);
@@ -275,4 +276,178 @@ test('text/token contrast meets 4.5:1 for normal, muted and status text', () => 
   }
   const dangerRatio = (Math.max(lum(C.destructiveForeground), lum(C.destructive)) + .05) / (Math.min(lum(C.destructiveForeground), lum(C.destructive)) + .05);
   assert.ok(dangerRatio >= 4.5, `Danger button text contrast: ${dangerRatio}`);
+});
+
+test('trend series preserve gaps, measured zero, and exclude Draft and Needs review records', () => {
+  const base = M.makeFixtures().boats[0];
+  const make = (day, weight, status = 'Saved') => {
+    const date = new Date(`2024-01-${String(day).padStart(2, '0')}T12:00:00.000Z`).toISOString();
+    return { ...M.selectBoat(M.blankRecord(), base), id: `trend-${day}-${status}`, date, status,
+      noCatch: weight === 0, lines: weight === null ? [] : [{ ...M.blankLine('Rabbit fish'), weight: String(weight), price: '250' }] };
+  };
+  const records = [make(8, 0), make(15, null), make(16, 12, 'Needs review'), make(17, 18, 'Draft')];
+  const series = T.calculateRecordSeries(records, 'total');
+  const points = series[2024].filter(Boolean);
+  assert.equal(points.length, 2);
+  assert.equal(points.find(p => p.value === 0).value, 0);
+  assert.equal(points.find(p => p.value === null).value, null);
+  assert.equal(T.calculateRecordSeries([make(8, null)], 'total')[2024][1].value, null);
+});
+
+test('trip-hour charts use engine trips with valid times and calculate ratio of sums', () => {
+  const engine = M.makeFixtures().boats[0];
+  const outboard = (day, weight, hours, status = 'Saved', propulsion = 'Outboard engine') => {
+    const date = new Date(`2024-02-${String(day).padStart(2, '0')}T12:00:00.000Z`).toISOString();
+    const start = new Date(`2024-02-${String(day).padStart(2, '0')}T00:00:00.000Z`);
+    const end = new Date(start.getTime() + hours * 3600000);
+    return { ...M.selectBoat(M.blankRecord(), { ...engine, propulsion }), id: `time-${day}-${weight}`, date, status,
+      timeOut: start.toISOString(), timeIn: hours === null ? '' : end.toISOString(),
+      lines: weight === null ? [] : [{ ...M.blankLine('Rabbit fish'), weight: String(weight), price: '250' }] };
+  };
+  const records = [outboard(5, 10, 1), outboard(6, 100, 2), outboard(7, 90, null), outboard(8, 900, 1, 'Saved', 'Sail'), outboard(9, 800, 1, 'Needs review')];
+  const ratio = T.calculateRecordSeries(records, 'perHour')[2024].filter(Boolean)[0];
+  assert.equal(ratio.value, 110 / 3);
+  assert.equal(ratio.trips, 3);
+  assert.equal(ratio.missingTimes, 1);
+  const hours = T.calculateRecordSeries(records, 'length')[2024].filter(Boolean)[0];
+  assert.equal(hours.value, 1.5);
+  assert.equal(hours.trips, 3);
+});
+
+test('weighted price is ratio of sums and year states expose only available historical years', () => {
+  const boat = M.makeFixtures().boats[0];
+  const make = (day, weight, price) => {
+    const date = new Date(`2024-03-${String(day).padStart(2, '0')}T12:00:00.000Z`).toISOString();
+    return { ...M.selectBoat(M.blankRecord(), boat), date, status: 'Saved', lines: [{ ...M.blankLine('Rabbit fish'), weight: String(weight), price: String(price) }] };
+  };
+  const price = T.calculateRecordSeries([make(8, 1, 100), make(9, 3, 200)], 'price')[2024].filter(Boolean)[0];
+  assert.equal(price.value, 175);
+  assert.deepEqual(T.trendHistoryYears('None'), [2026]);
+  assert.deepEqual(T.trendHistoryYears('Some'), [2026, 2025]);
+  assert.deepEqual(T.trendHistoryYears('County loaded'), [2026, 2025, 2024, 2023, 2022, 2021]);
+  const state = M.makeFixtures();
+  const none = T.buildTrendSeries(state, 'total', 'None');
+  assert.equal(none.years.length, 1);
+  assert.ok(none.series[2026].slice(0, 34).every(point => point.value === null));
+  assert.ok(none.series[2026].some(point => point.week === 41 && point.value === null));
+});
+
+test('chart source snapshot omits fisher and boat identifiers and records provenance and missing data', () => {
+  const state = M.makeFixtures();
+  const snapshot = T.makeTrendSnapshot(state, 'total', '3 years');
+  assert.equal(snapshot.years.length, 3);
+  assert.equal(snapshot.synthetic, true);
+  assert.ok(Object.values(snapshot.sources).every(source => source.includes('Synthetic sample')));
+  assert.equal(JSON.stringify(snapshot).includes('Neema'), false);
+  assert.equal(JSON.stringify(snapshot).includes('Amani'), false);
+  assert.ok(snapshot.series['2026'].some(point => point.value === null));
+});
+
+test('flag send lifecycle queues offline, cancels to draft, retries locally and snapshots sent content', () => {
+  const state = M.makeFixtures();
+  const snapshot = T.makeTrendSnapshot(state, 'species', '3 years');
+  const flag = { ...T.createFlag(state, snapshot), recipient: 'county@example.test', note: 'Catch looks lower.' };
+  const waiting = T.queueFlag(flag, state);
+  assert.equal(waiting.status, 'Waiting to send');
+  const cancelledState = T.resolveFlag({ ...state, flags: [waiting] }, waiting.id, 'cancel');
+  assert.equal(cancelledState.flags[0].status, 'Draft');
+  const failState = { ...state, settings: { ...state.settings, offline: false }, trends: { ...state.trends, nextFlagFails: true }, flags: [{ ...flag }] };
+  const queuedFailure = T.queueFlag(flag, failState);
+  assert.equal(queuedFailure.status, "Couldn't send");
+  const failedState = { ...failState, trends: { ...failState.trends, nextFlagFails: false }, flags: [queuedFailure] };
+  const sentState = T.resolveFlag(failedState, flag.id, 'retry');
+  const sent = sentState.flags[0];
+  assert.equal(sent.status, 'Sent');
+  assert.equal(sent.sentNote, 'Catch looks lower.');
+  assert.equal(sent.sentTo, 'county@example.test');
+  assert.deepEqual(sent.sentSnapshot, snapshot);
+  const followed = T.addFlagFollowup(sent, { agreed: 'Analyse', owner: 'County team', when: 'Not known', evidence: '', outcome: 'County will analyse' });
+  assert.equal(followed.status, 'Sent');
+  assert.equal(followed.followup.when, 'Not known');
+  assert.ok(followed.history.some(item => item.label === 'Sent'));
+  const closed = T.setFlagClosed(followed, true);
+  assert.ok(closed.closedAt);
+  const reopened = T.setFlagClosed(closed, false);
+  assert.equal(reopened.closedAt, undefined);
+  assert.ok(reopened.history.some(item => item.label === 'Flag reopened'));
+});
+
+test('legacy local storage migrates trend defaults without replacing records or flags', async () => {
+  const state = M.makeFixtures();
+  delete state.trends;
+  delete state.flags;
+  state.trendReminderLog = [2, 4];
+  const originalRecordIds = state.records.map(record => record.id);
+  const storage = createLocalStorage({ getItem: async () => JSON.stringify(state), setItem: async () => {} });
+  const migrated = await storage.read();
+  assert.equal(migrated.trends.history, 'County loaded');
+  assert.deepEqual(migrated.flags, []);
+  assert.deepEqual(migrated.trendReminderLog, []);
+  assert.deepEqual(migrated.records.map(record => record.id), originalRecordIds);
+});
+
+test('reminder history logs a shown chart once and updates its local choice', () => {
+  const state = M.makeFixtures();
+  const shown = T.logTrendReminder(state, 'reminder-total-3-4', 'total', '3 years', 4);
+  const duplicate = T.logTrendReminder(shown, 'reminder-total-3-4', 'total', '3 years', 4);
+  assert.equal(duplicate.trendReminderLog.length, 1);
+  const chosen = T.logTrendReminder(duplicate, 'reminder-total-3-4', 'total', '3 years', 4, 'Not now');
+  assert.equal(chosen.trendReminderLog[0].choice, 'Not now');
+  assert.equal(chosen.trendReminderLog[0].runLength, 4);
+});
+
+test('month readouts use the same weighted facts as weekly ratios, not the first point or mean of ratios', () => {
+  const boat = { ...M.makeFixtures().boats[0], propulsion: 'Outboard engine' };
+  const make = (day, weight, hours, price) => ({ ...M.selectBoat(M.blankRecord(), boat),
+    date: `2026-03-${day}T12:00:00Z`, status: 'Saved', timeOut: `2026-03-${day}T00:00:00Z`,
+    timeIn: `2026-03-${day}T${String(hours).padStart(2, '0')}:00:00Z`,
+    lines: [{ ...M.blankLine('Rabbit fish'), weight: String(weight), price: String(price) }] });
+  const records = [make('09', 10, 1, 100), make('16', 90, 3, 300)];
+  const ratio = T.calculateRecordSeries(records, 'perHour')[2026];
+  assert.equal(T.summarizeTrendMonth(ratio, 2, 'perHour').value, 100 / 4);
+  const price = T.calculateRecordSeries(records, 'price')[2026];
+  assert.equal(T.summarizeTrendMonth(price, 2, 'price').value, 280);
+  assert.equal(T.summarizeTrendMonth(price, 0, 'price').value, null);
+});
+
+test('comparison runs ignore future weeks but stop at internal gaps, and bands require distinct years', () => {
+  const point = (week, value, trips = 5) => ({ week, month: 0, value, trips });
+  const current = [point(1, 8), point(2, null, null), point(3, 7), point(4, 6), point(5, null, null)];
+  const series = { 2026: current, 2025: current.map(p => point(p.week, 10)), 2024: current.map(p => point(p.week, 11)), 2023: current.map(p => point(p.week, 12)) };
+  const comparison = T.deriveTrendComparison(series, [2026, 2025, 2024, 2023], 'total');
+  assert.equal(comparison.runLength, 2);
+  assert.equal(comparison.startWeek, 3);
+  assert.equal(comparison.endWeek, 4);
+  assert.match(comparison.text, /2 weeks in a row/);
+  assert.equal(T.earlierBandForWeek(series, [2025], 2), null);
+  assert.deepEqual(T.earlierBandForWeek(series, [2025, 2024, 2023], 2), { low: 10, high: 12 });
+});
+
+test('synthetic source coverage and filters never invent county breakdowns or other species histories', () => {
+  const state = { ...M.makeFixtures(), records: [] };
+  const loaded = T.buildTrendSeries(state, 'total', 'County loaded');
+  assert.ok(loaded.series[2025].slice(0, 4).every(p => p.value !== null));
+  assert.ok(loaded.series[2023].filter(p => p.month === 5 || p.month === 6).every(p => p.value === null));
+  const some = T.buildTrendSeries(state, 'trips', 'Some');
+  assert.ok(some.series[2025].filter(p => p.month < 7).every(p => p.value === null));
+  const filtered = T.buildTrendSeries(state, 'total', 'County loaded', 'Rabbit fish', 'trip', 'All', ['GN · Gill net']);
+  assert.ok(Object.values(filtered.series).flat().every(p => p.value === null));
+  const otherSpecies = T.buildTrendSeries(state, 'species', 'County loaded', 'Snappers');
+  assert.ok(Object.values(otherSpecies.series).flat().every(p => p.value === null));
+});
+
+test('stable local flag numbers and sent snapshots survive new flags and prohibit re-sending', () => {
+  const state = { ...M.makeFixtures(), settings: { ...M.makeFixtures().settings, offline: false } };
+  const first = T.createFlag(state, T.makeTrendSnapshot(state, 'total', '3 years'));
+  const second = T.createFlag({ ...state, flags: [first] }, first.snapshot);
+  assert.equal(first.number, 1);
+  assert.equal(second.number, 2);
+  const followup = T.createFlag({ ...state, flags: [second, first] }, first.snapshot, first.id);
+  assert.equal(followup.note, 'Follows flag 1');
+  assert.equal(M.makeFixtures().records.filter(record => record.status === 'Needs review').length, 6);
+  const sent = T.queueFlag({ ...first, recipient: 'county@example.test' }, { ...state, flags: [second, first] });
+  assert.equal(sent.sentCard.number, 1);
+  assert.throws(() => T.patchFlag(sent, { note: 'changed' }), /read-only/);
+  assert.throws(() => T.queueFlag(sent, state), /already sent/);
+  assert.throws(() => T.addFlagFollowup(sent, { agreed: '', owner: '', when: '2026-02-31', evidence: '', outcome: 'Not sure yet' }), /valid date/);
 });

@@ -53,11 +53,38 @@ export type Attempt = { id: string; at: string; from: string; to: string; email:
 export type Schedule = { enabled: boolean; frequency: string; weeks: string; email: string; firstDate: string };
 export type EditSession = { recordId: string; working: CatchRecord; reason: string; otherReason: string; section: string };
 export type Undo = { kind: 'line' | 'edit' | 'delete' | 'discard' | 'discardEdit'; target?: 'edit'; editSession?: EditSession; before: CatchRecord; line?: CatchLine; index?: number; afterRevision: number; expiresAt: number; label: string };
+export type TrendMetric = 'total' | 'species' | 'length' | 'perHour' | 'price' | 'trips';
+export type TrendHistoryMode = 'None' | 'Some' | 'County loaded';
+export type TrendSettings = {
+  history: TrendHistoryMode; countyReplies: boolean; reminderCard: boolean; nextFlagFails: boolean;
+  chartLines: 'Overlay' | 'Each year as a line'; reminderWeeks: number; fabVariant: 'extended' | 'icon';
+  fabSide: 'Right' | 'Left'; fabHomeButton: boolean; showAverage: boolean; chartView: 'Chart' | 'List'; rangeChoice: string;
+};
+export type TrendPoint = { week: number; month: number; value: number | null; trips: number | null; thin?: boolean; missingWeight?: number; missingTimes?: number; incomplete?: boolean;
+  sums?: { kg: number; weightTrips: number; hours: number; timedTrips: number; pairedKg: number; pairedHours: number; priceValue: number; pricedKg: number } };
+export type FlagHistory = { at: string; label: string };
+export type FlagFollowup = { agreed: string; owner: string; when: string; evidence: string; outcome: string; recordedAt: string; closedAt?: string };
+export type TrendReminderEntry = { id: string; metric: TrendMetric; range: string; runLength: number; shownAt: string; choice?: 'Not now' | 'Look closer' };
+export type TrendSnapshot = {
+  metric: TrendMetric; title: string; species: string; years: number[]; months: number[]; measure?: 'trip' | 'week'; site?: string;
+  sources: Record<string, string>; trips: Record<string, number | null>; series: Record<string, TrendPoint[]>;
+  synthetic: boolean; createdAt: string; range: string;
+};
+export type CountyFlag = {
+  id: string; number?: number; status: 'Draft' | 'Waiting to send' | "Couldn't send" | 'Sent' | 'Cancelled';
+  snapshot: TrendSnapshot; note: string; includePicture: boolean; recipient: string; markedWeeks: number[] | null;
+  createdAt: string; updatedAt: string; sentAt?: string; sentTo?: string; sentSnapshot?: TrendSnapshot;
+  sentNote?: string; sentPicture?: boolean; sentWeeks?: number[] | null; sentRecipient?: string;
+  sentCard?: { collector: string; site: string; number: number };
+  history: FlagHistory[]; followup?: FlagFollowup; follows?: string; closedAt?: string;
+};
 export type PrototypeState = {
   version: 2; records: CatchRecord[]; boats: Boat[]; fishers: Fisher[]; recipients: string[]; dayPrices: DayPrice[];
   settings: { collector: string; county: string; site: string; offline: boolean; failSaves: boolean; nextPhoto: 'A' | 'B' | 'C' | 'Error'; nextSendFails?: boolean; introSeen?: boolean };
   filters: Filters; schedule: Schedule; attempts: Attempt[]; sendDraft?: SendDraft; edit?: EditSession;
   undo?: Undo; banner?: { text: string; recordId: string }; revision: number;
+  trends?: TrendSettings; flags?: CountyFlag[]; trendReminderLog?: TrendReminderEntry[];
+  trendThresholdLog?: { weeks: number; at: string }[];
 };
 export const id = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 export const dayKey = (value: string | number | Date = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Nairobi', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(value));
@@ -277,7 +304,7 @@ export function makeFixtures(): PrototypeState {
     { id: 'imani', name: 'Imani', vesselType: 'Mtumbwi', propulsion: 'Paddle', horsepower: '', length: '3', registration: 'KWM-092', crew: '1' },
   ];
   const fishers: Fisher[] = ['Amani Bakari', 'Salama Juma', 'Juma Mwakio', 'Zawadi Masha', 'Bahati Kombo'].map((name, i) => ({ id: `fisher-${i}`, name, boatIds: [boats[i].id] }));
-  const statuses: Status[] = ['Saved', 'Needs review', 'Saved', 'Sent', 'Draft', 'Needs review', 'Needs review', 'Saved', 'Saved'];
+  const statuses: Status[] = ['Saved', 'Needs review', 'Saved', 'Sent', 'Draft', 'Needs review', 'Needs review', 'Saved', 'Saved', 'Needs review', 'Needs review', 'Needs review'];
   const records = statuses.map((status, index) => {
     const r = selectBoat(blankRecord('Msambweni Landing Site'), boats[index % 5]);
     const date = new Date(Date.now() - Math.floor(index / 3) * 86400000 - index * 600000).toISOString();
@@ -298,5 +325,8 @@ export function makeFixtures(): PrototypeState {
   return { version: 2, revision: 0, records, boats, fishers, recipients: ['records@msambwenibmu.co.ke'], dayPrices,
     settings: { collector: 'Asha Mwakio', county: 'Kwale', site: 'Msambweni Landing Site', offline: true, failSaves: false, nextPhoto: 'A', nextSendFails: false, introSeen: false },
     filters: emptyFilters(), attempts: [{ id: 'sample-send', at: records[3].date, from: dayKey(Date.now() - 13 * 86400000), to: dayKey(), email: 'records@msambwenibmu.co.ke', message: '', recordIds: [records[3].id], state: 'Sent' }],
-    schedule: { enabled: false, frequency: 'Every 2 weeks', weeks: '2', email: 'records@msambwenibmu.co.ke', firstDate: dayKey(Date.now() + 86400000) } };
+    schedule: { enabled: false, frequency: 'Every 2 weeks', weeks: '2', email: 'records@msambwenibmu.co.ke', firstDate: dayKey(Date.now() + 86400000) },
+    trends: { history: 'County loaded', countyReplies: false, reminderCard: false, nextFlagFails: false, chartLines: 'Overlay',
+      reminderWeeks: 0, fabVariant: 'extended', fabSide: 'Right', fabHomeButton: false, showAverage: false, chartView: 'Chart', rangeChoice: '3 years' },
+    flags: [], trendReminderLog: [] };
 }

@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { usePrototype } from '@/lib/prototype/store';
 import { PROPULSIONS, VESSELS, canSend, dayKey, dayLabel, id, makeFixtures, recordCount, resolveSendAttempt, timeLabel, validEmail, type Boat, type Fisher, type Schedule } from '@/lib/prototype/model';
-import { ActionBar, Btn, C, Choices, Field, Heading, Notice, Overlay, Select, Shell, Txt, s } from './ui';
+import { ActionBar, Btn, C, Card, Choices, Field, Heading, Notice, Overlay, Select, Shell, StatusChip, Txt, s } from './ui';
 
 function Row({ title, value, open = false, expandable = false, onPress, onLongPress }: { title: string; value?: string; open?: boolean; expandable?: boolean; onPress: () => void; onLongPress?: () => void }) {
   return <Pressable accessibilityRole="button" onPress={onPress} onLongPress={onLongPress} style={s.settingRow}>
@@ -16,15 +16,20 @@ function Row({ title, value, open = false, expandable = false, onPress, onLongPr
 }
 function Group({ children }: { children: React.ReactNode }) { return <Text style={s.settingGroup}>{children}</Text>; }
 
-export function SettingsScreen({ onTab, onOpen }: { onTab: (tab: string) => void; onOpen: (name: string) => void }) {
+export function SettingsScreen({ onTab, onOpen, onFlags, onFabVisibilityChange }: {
+  onTab: (tab: string) => void; onOpen: (name: string) => void; onFlags?: () => void; onFabVisibilityChange?: (visible: boolean) => void;
+}) {
   const { data, change, saved, error } = usePrototype();
   const [expanded, setExpanded] = useState(''), [facilitator, setFacilitator] = useState(false);
   const [schedule, setSchedule] = useState<Schedule | null>(null), [message, setMessage] = useState('');
   const [confirm, setConfirm] = useState('');
+  useEffect(() => { onFabVisibilityChange?.(true); }, [onFabVisibilityChange]);
   if (!data) return null;
   const toggle = (key: string) => {
-    setExpanded(expanded === key ? '' : key);
-    if (key === 'Automatic sending' && expanded !== key) setSchedule({ ...data.schedule });
+    const next = expanded === key ? '' : key;
+    setExpanded(next);
+    if (key === 'Automatic sending' && next) setSchedule({ ...data.schedule });
+    onFabVisibilityChange?.(!facilitator && next !== 'Automatic sending');
   };
   const saveSchedule = async () => {
     if (!schedule) return;
@@ -77,16 +82,33 @@ export function SettingsScreen({ onTab, onOpen }: { onTab: (tab: string) => void
           style={[s.quickChip, schedule.weeks === weeks && s.quickChipSelected]}>{schedule.weeks === weeks ? <Feather name="check" size={16} color={C.primary} /> : null}<Text style={s.chipLabel}>{weeks} weeks</Text></Pressable>)}</View>
         <Select label="Send to" emptyLabel="Choose a recipient" allowEmpty={false} value={schedule.email} options={data.recipients.map(email => ({ value: email, label: email }))} onChange={email => setSchedule(current => current ? { ...current, email } : current)} />
       </> : null}
-      <ActionBar secondary={<Btn label="Cancel" kind="secondary" onPress={() => { setExpanded(''); setSchedule(null); }} />}
+      <ActionBar secondary={<Btn label="Cancel" kind="secondary" onPress={() => { setExpanded(''); setSchedule(null); onFabVisibilityChange?.(!facilitator); }} />}
         primary={<Btn label="Save schedule" disabled={schedule.enabled && !validEmail(schedule.email)}
           disabledReason={schedule.enabled && !validEmail(schedule.email) ? 'Choose a valid recipient.' : undefined}
           onPress={() => { void saveSchedule(); }} />} />
       {message ? <Txt>{message}</Txt> : null}
     </View> : null}
     <Row title="Send history" onPress={() => onOpen('Send history')} />
+    <Row title="Flags" value={`${data.flags?.length ?? 0}`} onPress={() => onFlags?.()} />
+    <Group>Compare trends</Group>
+    <Row title="Compare trends" value={`History · ${data.trends?.history ?? 'County loaded'}`} expandable open={expanded === 'Compare trends'} onPress={() => toggle('Compare trends')} />
+    {expanded === 'Compare trends' ? <View style={s.settingInline}>
+      <Txt small muted>County history is read only in this prototype.</Txt>
+      <View style={s.settingRow}><Text style={s.settingRowTitle}>County history</Text><Text style={s.settingRowValue}>{data.trends?.history === 'County loaded' ? 'Loaded 3 Nov (demo)' : 'Not loaded'}</Text></View>
+      <Choices label="Remind me when this year is outside earlier years for" options={['Off', '2 weeks', '3 weeks', '4 weeks', '6 weeks', '8 weeks']}
+        value={data.trends?.reminderWeeks ? `${data.trends.reminderWeeks} weeks` : 'Off'}
+        onChange={value => {
+          const weeks = value === 'Off' ? 0 : Number(value.split(' ')[0]);
+          void change(state => ({ ...state, trends: { ...state.trends!, reminderWeeks: weeks },
+            trendThresholdLog: [...(state.trendThresholdLog ?? []), { weeks, at: new Date().toISOString() }] }));
+        }} />
+      <Row title="Reminder history" value={`${data.trendReminderLog?.length ?? 0}`} onPress={() => onOpen('Reminder history')} />
+    </View> : null}
     <Group>About</Group>
     <Row title="About this app" value="Practice" onPress={() => onOpen('About this app')} />
-    <Row title="Facilitator controls" expandable open={facilitator} onPress={() => setFacilitator(value => !value)} />
+    <Row title="Facilitator controls" expandable open={facilitator} onPress={() => setFacilitator(value => {
+      const next = !value; onFabVisibilityChange?.(!next && expanded !== 'Automatic sending'); return next;
+    })} />
     {facilitator ? <View style={s.settingInline}>
       <Choices label="Connection" value={data.settings.offline ? 'Offline' : 'Online'} options={['Offline', 'Online']} onChange={value => { void change(state => ({ ...state, settings: { ...state.settings, offline: value === 'Offline' } })); }} />
       <Choices label="Next photo scenario" value={data.settings.nextPhoto} options={['A', 'B', 'C', 'Error']} onChange={value => { void change(state => ({ ...state, settings: { ...state.settings, nextPhoto: value as typeof state.settings.nextPhoto } })); }} />
@@ -96,6 +118,25 @@ export function SettingsScreen({ onTab, onOpen }: { onTab: (tab: string) => void
         disabledReason={data.settings.offline ? 'Set the connection to Online first.' : undefined} onPress={() => { void simulateWaiting(); }} />
       <Btn label="Use empty sample records" kind="secondary" onPress={() => setConfirm('empty')} />
       <Btn label="Reset sample data" kind="danger" onPress={() => setConfirm('reset')} />
+      <Heading>Compare trends</Heading>
+      <Choices label="History" options={['None', 'Some', 'County loaded']} value={data.trends?.history ?? 'County loaded'}
+        onChange={history => { void change(state => ({ ...state, trends: { ...state.trends!, history: history as 'None' | 'Some' | 'County loaded' } })); }} />
+      <Choices label="County replies" options={['Off', 'On']} value={data.trends?.countyReplies ? 'On' : 'Off'}
+        onChange={value => { void change(state => ({ ...state, trends: { ...state.trends!, countyReplies: value === 'On' } })); }} />
+      <Choices label="Reminder card" options={['Off', 'On']} value={data.trends?.reminderCard ? 'On' : 'Off'}
+        onChange={value => { void change(state => ({ ...state, trends: { ...state.trends!, reminderCard: value === 'On',
+          reminderWeeks: value === 'On' ? state.trends?.reminderWeeks || 4 : 0,
+          ...(value === 'On' && state.trends?.history === 'County loaded' ? { rangeChoice: '5 years' } : {}) } })); }} />
+      <Choices label="Next flag fails" options={['Off', 'On']} value={data.trends?.nextFlagFails ? 'On' : 'Off'}
+        onChange={value => { void change(state => ({ ...state, trends: { ...state.trends!, nextFlagFails: value === 'On' } })); }} />
+      <Choices label="Chart lines" options={['Overlay', 'Each year as a line']} value={data.trends?.chartLines ?? 'Overlay'}
+        onChange={value => { void change(state => ({ ...state, trends: { ...state.trends!, chartLines: value as 'Overlay' | 'Each year as a line' } })); }} />
+      <Choices label="Add button" options={['Extended', 'Bare plus']} value={data.trends?.fabVariant === 'icon' ? 'Bare plus' : 'Extended'}
+        onChange={value => { void change(state => ({ ...state, trends: { ...state.trends!, fabVariant: value === 'Bare plus' ? 'icon' : 'extended' } })); }} />
+      <Choices label="Add button side" options={['Right', 'Left']} value={data.trends?.fabSide ?? 'Right'}
+        onChange={value => { void change(state => ({ ...state, trends: { ...state.trends!, fabSide: value as 'Right' | 'Left' } })); }} />
+      <Choices label="Add" options={['FAB only', 'FAB + Home button']} value={data.trends?.fabHomeButton ? 'FAB + Home button' : 'FAB only'}
+        onChange={value => { void change(state => ({ ...state, trends: { ...state.trends!, fabHomeButton: value === 'FAB + Home button' } })); }} />
     </View> : null}
     <Txt small muted>Practice</Txt>
     {message ? <Notice>{message}</Notice> : null}
@@ -107,7 +148,7 @@ export function SettingsScreen({ onTab, onOpen }: { onTab: (tab: string) => void
   </Shell>;
 }
 
-export function SettingsPage({ name, onBack }: { name: string; onBack: () => void }) {
+export function SettingsPage({ name, onBack, onFlag }: { name: string; onBack: () => void; onFlag?: (id: string) => void }) {
   const { data, change, saved, error } = usePrototype();
   const [selected, setSelected] = useState(''), [search, setSearch] = useState('');
   const [showArchived, setShowArchived] = useState(false);
@@ -237,8 +278,14 @@ export function SettingsPage({ name, onBack }: { name: string; onBack: () => voi
       </Overlay> : null}
     </> : null}
     {name === 'Send history' ? <>
+      {data.flags?.length ? <><Heading>Flags</Heading>{data.flags.map(flag => <Pressable key={flag.id} accessibilityRole="button" onPress={() => onFlag?.(flag.id)} style={[s.historyRow, { borderRadius: 12, backgroundColor: C.card }]}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}><Txt small muted>Flag</Txt><StatusChip status={flag.status} /></View>
+        <Text style={s.settingRowTitle}>{flag.snapshot.title} · {flag.snapshot.species}</Text>
+        <Txt small muted>{flag.sentTo ?? flag.recipient ?? 'No recipient'} · {flag.sentAt ? `Sent ${dayLabel(flag.sentAt)}` : 'No follow-up recorded'}</Txt>
+        {flag.followup ? <Txt small muted>Follow-up recorded {dayLabel(flag.followup.recordedAt)}</Txt> : null}
+      </Pressable>)}</> : null}
       {!data.attempts.length ? <Txt>No send history yet.</Txt> : data.attempts.map(attempt => <View key={attempt.id} style={s.historyRow}>
-        <Txt small muted>{dayLabel(attempt.at)} · {timeLabel(attempt.at)}</Txt><Text style={s.settingRowTitle}>{attempt.automatic ? `Sent automatically ${dayLabel(attempt.at)}: ${recordCount(attempt.recordIds.length)}` : attempt.state === 'Sent' ? 'Sent' : attempt.state}</Text>
+        <Txt small muted>Records · {dayLabel(attempt.at)} · {timeLabel(attempt.at)}</Txt><Text style={s.settingRowTitle}>{attempt.automatic ? `Sent automatically ${dayLabel(attempt.at)}: ${recordCount(attempt.recordIds.length)}` : attempt.state === 'Sent' ? 'Sent' : attempt.state}</Text>
         <Txt>{attempt.email} · {recordCount(attempt.recordIds.length)}</Txt>
         <Txt small muted>{dayLabel(attempt.from)} to {dayLabel(attempt.to)}</Txt>
         {['Waiting to send', "Couldn't send"].includes(attempt.state) ? <View style={{ gap: 8 }}>
@@ -250,6 +297,14 @@ export function SettingsPage({ name, onBack }: { name: string; onBack: () => voi
           }} />
         </View> : null}
       </View>)}
+    </> : null}
+    {name === 'Reminder history' ? <>
+      {!data.trendReminderLog?.length ? <Card><Heading>No reminders shown</Heading><Txt>A local history appears after a reminder is shown.</Txt></Card> :
+        [...data.trendReminderLog].reverse().map(entry => <View key={entry.id} style={s.historyRow}>
+          <Txt small muted>{dayLabel(entry.shownAt)} · {timeLabel(entry.shownAt)}</Txt>
+          <Text style={s.settingRowTitle}>{entry.metric} · {entry.range} · {entry.runLength} weeks lower</Text>
+          <Txt small muted>{entry.choice ?? 'Shown'}{entry.choice === 'Look closer' ? ' · A flag was opened' : ''}</Txt>
+        </View>)}
     </> : null}
     {message ? <Notice>{message}</Notice> : null}
   </Shell>;

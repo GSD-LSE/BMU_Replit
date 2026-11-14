@@ -34,6 +34,14 @@ export function createLocalStorage(adapter: LocalAdapter) {
       return {
         ...parsed,
         version: 2,
+        trends: { history: 'County loaded', countyReplies: false, reminderCard: false, nextFlagFails: false, chartLines: 'Overlay',
+          reminderWeeks: 0, fabVariant: 'extended', fabSide: 'Right', fabHomeButton: false, showAverage: false, chartView: 'Chart', rangeChoice: '3 years',
+          ...(parsed.trends ?? {}) },
+        flags: Array.isArray(parsed.flags) ? parsed.flags.map((flag, index) => ({
+          ...flag, number: flag.number ?? flag.sentCard?.number ?? parsed.flags!.length - index,
+        })) : [],
+        trendReminderLog: Array.isArray(parsed.trendReminderLog) ? parsed.trendReminderLog.filter(item =>
+          !!item && typeof item === 'object' && typeof item.id === 'string') : [],
         settings: { ...parsed.settings, nextSendFails: parsed.settings.nextSendFails ?? false, introSeen: parsed.settings.introSeen ?? false },
         boats: parsed.boats.map(boat => ({ ...boat, archived: boat.archived ?? false })),
         fishers: (parsed.fishers ?? []).map(fisher => ({ ...fisher, archived: fisher.archived ?? false })),

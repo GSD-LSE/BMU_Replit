@@ -13,7 +13,11 @@ import { updateSavedBoat } from './AddWizard';
 import { CatchReview, SpeciesPicker } from './CatchReview';
 import { ActionBar, Btn, C, Card, Choices, Field, Heading, Notice, Overlay, Select, Shell, StatusChip, Txt, s, useScrollTo } from './ui';
 
-let recordListScrollY = 0;
+const recordListScrollPositions: Record<string, number> = { 'All records': 0, 'Needs review': 0 };
+let reviewFilters = { ...emptyFilters(), days: 'all', statuses: ['Needs review'] };
+export function resetReviewFilters() {
+  reviewFilters = { ...emptyFilters(), days: 'all', statuses: ['Needs review'] };
+}
 export function RecordRow({ r, onOpen, onEdit }: { r: CatchRecord; onOpen: () => void; onEdit: () => void }) {
   const { data } = usePrototype();
   const action = r.status === 'Draft' ? 'Resume' : r.status === 'Needs review' ? 'Review' : 'Edit';
@@ -69,15 +73,25 @@ function dayGroupSummary(group: CatchRecord[]) {
   if (withPrice < group.length) parts.push(`(${withPrice} of ${group.length} have prices)`);
   return parts.join(' · ');
 }
-export function RecordList({ onTab, onOpen, onEdit, onResume, onResumeEdit }: {
+export function RecordList({ onTab, onOpen, onEdit, onResume, onResumeEdit, view = 'All records', onView }: {
   onTab: (tab: string) => void; onOpen: (r: CatchRecord) => void; onEdit: (r: CatchRecord) => void;
   onResume: (r: CatchRecord) => void; onResumeEdit: () => void;
+  view?: 'All records' | 'Needs review'; onView?: (view: 'All records' | 'Needs review' | 'Trends') => void;
 }) {
   const { data, change } = usePrototype();
   const [filtersOpen, setFiltersOpen] = useState(false), [filterSection, setFilterSection] = useState('Time');
+  const [, refreshReview] = useState(0);
   if (!data) return null;
-  const filters = data.filters, records = filterRecords(data).sort((a, b) => Number(b.status === 'Draft') - Number(a.status === 'Draft') || b.date.localeCompare(a.date));
-  const patchFilters = (patch: Partial<Filters>) => { void change(s => ({ ...s, filters: { ...s.filters, ...patch } })); };
+  const filters = view === 'Needs review' ? reviewFilters : data.filters;
+  const records = filterRecords(data, filters).sort((a, b) => Number(b.status === 'Draft') - Number(a.status === 'Draft') || b.date.localeCompare(a.date));
+  const patchFilters = (patch: Partial<Filters>) => {
+    if (view === 'Needs review') { reviewFilters = { ...reviewFilters, ...patch, statuses: ['Needs review'] }; refreshReview(n => n + 1); }
+    else void change(s => ({ ...s, filters: { ...s.filters, ...patch } }));
+  };
+  const clearFilters = () => {
+    if (view === 'Needs review') { resetReviewFilters(); refreshReview(n => n + 1); }
+    else void change(s => ({ ...s, filters: emptyFilters() }));
+  };
   const openFilters = (section = 'Time') => { setFilterSection(section); setFiltersOpen(true); };
   const timeText = filters.days === 'all' ? 'All time' : filters.days === 'custom' ? `${dayLabel(`${filters.from}T12:00:00`)} to ${dayLabel(`${filters.to}T12:00:00`)}` : filters.days === 'yesterday' ? 'Yesterday' : filters.days === '1' ? 'Today' : `Last ${filters.days} days`;
   const hasQuickStatus = filters.statuses.length === 1 && ['Needs review', 'Saved', 'Sent'].includes(filters.statuses[0]);
@@ -88,12 +102,23 @@ export function RecordList({ onTab, onOpen, onEdit, onResume, onResumeEdit }: {
     filters.fisherId ? { label: `Fisher: ${data.fishers.find(f => f.id === filters.fisherId)?.name ?? 'Selected'}`, clear: () => patchFilters({ fisherId: '' }) } : null,
     ...filters.species.map(sp => ({ label: speciesName(sp), clear: () => patchFilters({ species: filters.species.filter(v => v !== sp) }) })),
   ].filter((v): v is { label: string; clear: () => void } => !!v);
-  const activeFilterCount = extras.length + Number(filters.statuses.length > 0 && hasQuickStatus) + Number(filters.days !== '7') + Number(!!filters.search.trim());
-  const reviewQuick = filters.statuses.length === 1 && filters.statuses[0] === 'Needs review';
+  const activeFilterCount = extras.length + Number(view !== 'Needs review' && filters.statuses.length > 0 && hasQuickStatus)
+    + Number(view === 'Needs review' ? filters.days !== 'all' : filters.days !== '7') + Number(!!filters.search.trim());
   const readyQuick = filters.statuses.length === 1 && filters.statuses[0] === 'Saved';
   const sentQuick = filters.statuses.length === 1 && filters.statuses[0] === 'Sent';
   const readyCount = data.records.filter(r => !r.deleted && readyToSend(r)).length;
   const nodes: React.ReactNode[] = [
+    <View key="segments" style={{ flexDirection: 'row', minHeight: 48, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: C.input, backgroundColor: C.card, marginBottom: 4 }}>
+      {(['All records', 'Needs review', 'Trends'] as const).map(label => {
+        const active = label === view;
+        return <Pressable key={label} accessibilityRole="tab" accessibilityLabel={label} accessibilityState={{ selected: active }}
+          onPress={() => onView?.(label)} style={{ flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 3,
+            paddingHorizontal: 2, backgroundColor: active ? C.primary : C.card }}>
+          {active ? <Feather name="check" size={14} color={C.primaryForeground} /> : null}
+           <Text style={{ flex: 1, minWidth: 0, textAlign: 'center', fontSize: 16, lineHeight: 18, fontWeight: '700', color: active ? C.primaryForeground : C.foreground }}>{label}</Text>
+        </Pressable>;
+      })}
+    </View>,
     <View key="toolbar" style={{ gap: 8 }}>
       <View style={s.recordToolbar}>
         <View style={s.searchWrap}><Feather name="search" size={20} color={C.mutedForeground} />
@@ -109,9 +134,9 @@ export function RecordList({ onTab, onOpen, onEdit, onResume, onResumeEdit }: {
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterChips}>
         <Pressable accessibilityRole="button" style={s.timeChip} onPress={() => openFilters()}><Text style={s.chipLabel}>{timeText}</Text><Feather name="chevron-down" size={16} color={C.foreground} /></Pressable>
-        {[['Needs review', reviewQuick], ['Ready to send', readyQuick], ['Sent', sentQuick]].map(([label, active]) =>
+         {(view === 'Needs review' ? [] : [['Ready to send', readyQuick], ['Sent', sentQuick]] as [string, boolean][]).map(([label, active]) =>
           <Pressable key={String(label)} accessibilityRole="button" accessibilityState={{ selected: !!active }} onPress={() => {
-            const status = label === 'Needs review' ? 'Needs review' : label === 'Ready to send' ? 'Saved' : 'Sent';
+            const status = label === 'Ready to send' ? 'Saved' : 'Sent';
             patchFilters({ statuses: active ? [] : [status] });
           }} style={[s.quickChip, active && s.quickChipSelected]}>
             {active ? <Feather name="check" size={16} color={C.primary} /> : null}<Text style={s.chipLabel}>{String(label)}</Text>
@@ -135,10 +160,10 @@ export function RecordList({ onTab, onOpen, onEdit, onResume, onResumeEdit }: {
   if (!records.length) nodes.push(<Card key="empty"><Txt>No records match{filters.search ? ` "${filters.search}"` : ' these filters'}.</Txt>
     <Txt small muted>{extras.length ? `Filters: ${extras.map(e => e.label).join(' · ')}` : `Time: ${timeText}`}</Txt>
     <Btn label={filters.search ? 'Clear search' : 'Clear filters'} kind="secondary"
-      onPress={() => patchFilters(filters.search ? { search: '' } : emptyFilters())} /></Card>);
-  if (filtersOpen) nodes.push(<FilterOverlay key="filters" initialSection={filterSection} onClose={() => setFiltersOpen(false)} />);
-  return <Shell title="Records" tab="Records" onTab={onTab} offline={data.settings.offline} offlineCompact contentGap={8} stickyIndices={sticky}
-    initialScrollOffset={recordListScrollY} onScrollOffset={value => { recordListScrollY = value; }}
+      onPress={() => filters.search ? patchFilters({ search: '' }) : clearFilters()} /></Card>);
+   if (filtersOpen) nodes.push(<FilterOverlay key="filters" initialSection={filterSection} reviewMode={view === 'Needs review'} initialFilters={filters} onApply={next => { if (view === 'Needs review') { reviewFilters = { ...next, statuses: ['Needs review'] }; refreshReview(n => n + 1); } else void change(s => ({ ...s, filters: next })); }} onClose={() => setFiltersOpen(false)} />);
+  return <Shell title="Records" tab="Records" onTab={onTab} offline={data.settings.offline} offlineCompact contentGap={8} stickyIndices={[0, ...sticky]} scrollKey={`Records-${view}`}
+    initialScrollOffset={recordListScrollPositions[view]} onScrollOffset={value => { recordListScrollPositions[view] = value; }}
     footer={readyQuick ? <Btn label={`Send ${readyCount} ${readyCount === 1 ? 'record' : 'records'}`} disabled={!readyCount} onPress={() => onTab('Send')} /> : undefined}>{nodes}</Shell>;
 }
 function FilterHeading({ title, initialSection }: { title: string; initialSection: string }) {
@@ -146,10 +171,12 @@ function FilterHeading({ title, initialSection }: { title: string; initialSectio
   useEffect(() => { if (title !== initialSection) return; const timer = setTimeout(() => scrollTo(y.current), 260); return () => clearTimeout(timer); }, [initialSection, scrollTo, title]);
   return <Text onLayout={event => { y.current = event.nativeEvent.layout.y; }} style={s.filterSection}>{title}</Text>;
 }
-function FilterOverlay({ onClose, initialSection = 'Time' }: { onClose: () => void; initialSection?: string }) {
+function FilterOverlay({ onClose, initialSection = 'Time', reviewMode = false, initialFilters, onApply }: {
+  onClose: () => void; initialSection?: string; reviewMode?: boolean; initialFilters: Filters; onApply: (next: Filters) => void;
+}) {
   const { data, change } = usePrototype();
   const reduceMotion = useMotionPrefs();
-  const [f, setF] = useState<Filters>(data!.filters);
+  const [f, setF] = useState<Filters>(initialFilters);
   const [picker, setPicker] = useState<'boat' | 'fisher' | 'species' | ''>('');
   const [monthOffset, setMonthOffset] = useState(0), [calendarStart, setCalendarStart] = useState(f.days === 'custom' ? f.from : '');
   const [query, setQuery] = useState('');
@@ -175,9 +202,11 @@ function FilterOverlay({ onClose, initialSection = 'Time' }: { onClose: () => vo
   if (!data) return null;
   return <Overlay key={picker || 'filters'} variant={picker ? 'page' : 'sheet'} title={picker ? `Choose ${picker}` : 'Filter records'} onClose={picker ? () => setPicker('') : onClose}
     footer={picker === 'species' ? <Btn label={`Done (${f.species.length})`} onPress={() => { setPicker(''); }} /> : picker ? undefined : <ActionBar
-    primary={<Btn label={`Show ${count} ${count === 1 ? 'record' : 'records'}`} disabled={!rangeGood}
-      disabledReason={!rangeGood ? 'Choose a start and end date.' : undefined} closeOnPress onPress={async () => { configureLayoutMotion(reduceMotion); return await change(s => ({ ...s, filters: f })); }} />}
-    secondary={<Btn label="Reset" kind="quiet" onPress={() => { setF(emptyFilters()); setCalendarStart(''); }} />} />}>
+     primary={<Btn label={`Show ${count} ${count === 1 ? 'record' : 'records'}`} disabled={!rangeGood}
+       disabledReason={!rangeGood ? 'Choose a start and end date.' : undefined} closeOnPress onPress={() => { configureLayoutMotion(reduceMotion); onApply(f); return true; }} />}
+     secondary={<Btn label="Reset" kind="quiet" onPress={() => {
+       setF(reviewMode ? { ...emptyFilters(), days: 'all', statuses: ['Needs review'] } : emptyFilters()); setCalendarStart('');
+     }} />} />}>
     {picker ? <>
       <Field label={pickerQuery} value={query} onChange={setQuery} />
       {pickerItems.filter(item => item.label.toLowerCase().includes(query.toLowerCase())).map(item => {
@@ -210,12 +239,12 @@ function FilterOverlay({ onClose, initialSection = 'Time' }: { onClose: () => vo
         </View>
         <Txt>{f.from ? `${dayLabel(`${f.from}T12:00:00`)}${f.to ? ` to ${dayLabel(`${f.to}T12:00:00`)}` : ' · choose an end date'}` : 'Choose a start date'}</Txt>
       </View> : null}
-       <FilterHeading title="Status" initialSection={initialSection} />
+        {!reviewMode ? <><FilterHeading title="Status" initialSection={initialSection} />
       <View style={s.choiceWrap}>{['Draft', 'Needs review', 'Saved', 'Waiting to send', "Couldn't send", 'Sent'].map(status => {
         const selected = f.statuses.includes(status);
         return <Pressable key={status} accessibilityRole="checkbox" accessibilityState={{ checked: selected }} onPress={() => patch({ statuses: selected ? f.statuses.filter(v => v !== status) : [...f.statuses, status] })} style={[s.quickChip, selected && s.quickChipSelected]}>
           {selected ? <Feather name="check" size={16} color={C.primary} /> : null}<Text style={s.chipLabel}>{status}</Text></Pressable>;
-      })}</View>
+       })}</View></> : null}
        <FilterHeading title="Boat" initialSection={initialSection} />
       <Pressable onPress={() => { setQuery(''); setPicker('boat'); }} style={s.pickerRow}><Text style={s.pickerRowText}>Boat: {data.boats.find(b => b.id === f.boatId)?.name ?? 'Any'}</Text><Feather name="chevron-right" size={20} color={C.foreground} /></Pressable>
        <FilterHeading title="Fisher" initialSection={initialSection} />

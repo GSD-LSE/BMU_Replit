@@ -3,7 +3,7 @@ name: BMU scenario prototype scope
 description: Why the new Add/Edit/Send experience differs from the earlier capture-first demo.
 ---
 
-The approved B1–B10 feedback governs the current Add/Edit/Send practice prototype. Home is action-first, with Add record foremost, limited review/send readiness, and recent notes; do not restore an analytics dashboard.
+The approved B1–B16 feedback governs the current practice prototype. Home is action-first, with Add record foremost, limited review/send readiness, and recent notes; charts belong in Records > Trends, not on Home.
 
 **Why:** The user asked to plan and execute the attached feedback in order. Its defaults update the earlier scenario specification while preserving the emphasis on establishing and correcting catch records.
 

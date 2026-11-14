@@ -42,6 +42,22 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
     })();
     return () => { alive.current = false; };
   }, []);
+  const retry = async () => {
+    if (current.current) return persist(current.current);
+    try {
+      const loaded = await storage.current.read();
+      const parsed = loaded ? { ...loaded, banner: undefined } : makeFixtures();
+      current.current = parsed;
+      setData(parsed);
+      setError('');
+      if (loaded) setSavedRevision(parsed.revision);
+      else await persist(parsed);
+      return true;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not load local data.');
+      return false;
+    }
+  };
   const change = async (mutation: Mutation) => {
     if (!current.current) return false;
     const previous = current.current;
@@ -65,7 +81,7 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(timer);
   }, []);
   return <Context.Provider value={{ data, saved: !!data && savedRevision === data.revision && !error, error,
-    change, retry: () => current.current ? persist(current.current) : Promise.resolve(false) }}>{children}</Context.Provider>;
+    change, retry }}>{children}</Context.Provider>;
 }
 export function usePrototype() {
   const store = useContext(Context);

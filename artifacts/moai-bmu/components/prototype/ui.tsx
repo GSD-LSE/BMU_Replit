@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useId, useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Modal, Platform, BackHandler, Keyboard, useWindowDimensions, type KeyboardTypeOptions, type ScrollView } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
@@ -14,6 +14,17 @@ export const C = colors.light;
 export type Icon = keyof typeof Feather.glyphMap;
 export const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 const OverlayDismissContext = createContext<(() => void) | null>(null);
+const OverlayVisibilityContext = createContext<{ open: boolean; setOpen: (id: string, open: boolean) => void }>({ open: false, setOpen: () => {} });
+export function OverlayVisibilityProvider({ children }: { children: React.ReactNode }) {
+  const ids = useRef(new Set<string>());
+  const [open, setOpenState] = useState(false);
+  const setOpen = useCallback((id: string, value: boolean) => {
+    if (value) ids.current.add(id); else ids.current.delete(id);
+    setOpenState(ids.current.size > 0);
+  }, []);
+  return <OverlayVisibilityContext.Provider value={{ open, setOpen }}>{children}</OverlayVisibilityContext.Provider>;
+}
+export const useOverlayOpen = () => useContext(OverlayVisibilityContext).open;
 type KeyboardActions = { next?: () => void };
 const KeyboardActionsContext = createContext<(actions: KeyboardActions | null) => void>(() => {});
 const ScrollToContext = createContext<(y: number) => void>(() => {});
@@ -63,21 +74,21 @@ export function ActionBar({ primary, secondary, danger, variant = 'row' }: {
   </View>;
 }
 export function Field({ label, value, onChange, numeric = false, multiline = false, before, hint, keyboardType, testID, placeholder,
-  inputRef, onFocus, onBlur }: {
+  inputRef, onFocus, onBlur, disabled = false }: {
   label: string; value: string; onChange: (v: string) => void; numeric?: boolean; multiline?: boolean; before?: string;
   hint?: string; keyboardType?: KeyboardTypeOptions; testID?: string; placeholder?: string; inputRef?: React.Ref<TextInput>;
-  onFocus?: () => void; onBlur?: () => void;
+  onFocus?: () => void; onBlur?: () => void; disabled?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
   const changed = before !== undefined && before !== value;
   return <View style={s.field}>
     {label.startsWith('Search ') ? null : <Text style={s.label}>{label}</Text>}
     {changed ? <Txt small bold>Changed · Was: {before || 'No value yet'}</Txt> : null}
-    <TextInput ref={inputRef} value={value} accessibilityLabel={label} testID={testID ?? slug(label)} onChangeText={onChange}
+    <TextInput ref={inputRef} value={value} accessibilityLabel={label} testID={testID ?? slug(label)} onChangeText={onChange} editable={!disabled}
       onFocus={() => { setFocused(true); onFocus?.(); }} onBlur={() => { setFocused(false); onBlur?.(); }}
       placeholder={placeholder ?? (label.startsWith('Search ') ? label : '')} placeholderTextColor={C.mutedForeground} multiline={multiline}
       autoCapitalize={keyboardType === 'email-address' ? 'none' : 'sentences'} keyboardType={keyboardType ?? (numeric ? 'decimal-pad' : 'default')}
-      style={[s.input, focused && s.inputFocused, multiline && { minHeight: 100, textAlignVertical: 'top' }]} />
+       style={[s.input, focused && s.inputFocused, disabled && { opacity: .72 }, multiline && { minHeight: 100, textAlignVertical: 'top' }]} />
     {hint ? <Txt small muted>{hint}</Txt> : null}
     {numeric && value.trim() && numberValue(value) === null ? <Text style={s.error}>Enter a number of zero or more.</Text> : null}
   </View>;
@@ -118,11 +129,11 @@ export function Notice({ children, warning = false }: { children: React.ReactNod
   return <View style={[s.notice, warning && { backgroundColor: C.paleWarning }]}><Feather name={warning ? 'alert-circle' : 'info'} size={20} color={C.foreground} /><View style={[s.flex, { gap: 8 }]}>{textOnly ? <Txt>{children}</Txt> : children}</View></View>;
 }
 export function Shell({ title, subtitle, offline, saved, back, children, footer, tab, onTab, stickyIndices, scrollKey,
-  presentation = 'screen', backIcon, backLabel, headerRight, headerBadge, offlineCompact = false, initialScrollOffset, onScrollOffset, inOverlay = false, contentGap = 16 }: {
+  presentation = 'screen', backIcon, backLabel, headerRight, headerBadge, offlineCompact = false, initialScrollOffset, onScrollOffset, inOverlay = false, contentGap = 16, titleSize }: {
   title: string; subtitle?: string; offline?: boolean; saved?: string; back?: () => void; children: React.ReactNode; footer?: React.ReactNode;
   tab?: string; onTab?: (tab: string) => void; presentation?: 'screen' | 'dialog'; backIcon?: Icon; backLabel?: string;
   stickyIndices?: number[]; headerRight?: React.ReactNode; headerBadge?: React.ReactNode; offlineCompact?: boolean; inOverlay?: boolean; contentGap?: number;
-  scrollKey?: string;
+  scrollKey?: string; titleSize?: number;
   initialScrollOffset?: number; onScrollOffset?: (y: number) => void;
 }) {
   const insets = useSafeAreaInsets();
@@ -148,7 +159,7 @@ export function Shell({ title, subtitle, offline, saved, back, children, footer,
     <View style={s.header}>
       {back ? <Pressable onPress={back} accessibilityRole="button" accessibilityLabel={backLabel ?? (presentation === 'dialog' ? 'Close dialog' : 'Back')}
         testID="header-back" style={s.iconButton}><Feather name={backIcon ?? (presentation === 'dialog' ? 'x' : 'arrow-left')} size={23} color={C.foreground} /></Pressable> : null}
-      <View style={s.flex}><Text style={s.title}>{title}</Text>{subtitle ? <Txt small muted>{subtitle}</Txt> : null}</View>
+      <View style={s.flex}><Text style={[s.title, titleSize ? { fontSize: titleSize, lineHeight: titleSize * 1.3 } : undefined]}>{title}</Text>{subtitle ? <Txt small muted>{subtitle}</Txt> : null}</View>
       {headerRight}
       {!splitMeta ? offlinePill : null}
       {saved && !splitMeta ? <Text accessibilityLiveRegion="polite" style={s.saved}>{saved}</Text> : null}
@@ -227,6 +238,8 @@ export function Overlay({ title, onClose, children, footer, saved, variant = 'sh
   const reduceMotion = useMotionPrefs();
   const { height } = useWindowDimensions();
   const [mounted, setMounted] = useState(true);
+  const overlayId = useId();
+  const visibility = useContext(OverlayVisibilityContext);
   const closing = useRef(false);
   const progress = useSharedValue(0);
   const scrimProgress = useSharedValue(0);
@@ -245,6 +258,10 @@ export function Overlay({ title, onClose, children, footer, saved, variant = 'sh
     progress.value = withTiming(1, { duration: enterDuration, easing: Easing.out(Easing.cubic) });
     scrimProgress.value = withTiming(1, { duration: reduceMotion ? 100 : 150, easing: Easing.out(Easing.cubic) });
   }, [enterDuration, progress, reduceMotion, scrimProgress]);
+  useEffect(() => {
+    visibility.setOpen(overlayId, mounted);
+    return () => visibility.setOpen(overlayId, false);
+  }, [mounted, overlayId, visibility.setOpen]);
   const panelStyle = useAnimatedStyle(() => ({
     opacity: reduceMotion || variant === 'dialog' ? progress.value : 1,
     transform: variant !== 'dialog' && !reduceMotion ? [{ translateY: height * (1 - progress.value) }] : [],

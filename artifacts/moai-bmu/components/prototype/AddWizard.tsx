@@ -53,7 +53,8 @@ export default function AddWizard({ recordId, onHome, onNextRecord }: { recordId
     const status = mode === 'later' || needsCheck(r) > 0 || r.photo?.state === 'processing' ? 'Needs review' : 'Saved';
     const fresh = mode === 'next' ? blankRecord(data.settings.site) : null;
     const readyCount = data.records.filter(record => record.id !== r.id && readyToSend(record)).length + (status === 'Saved' ? 1 : 0);
-    const text = status === 'Saved' ? `Saved. ${recordCount(readyCount)} ready to send.` : `Saved as Needs review: ${r.boatName}, ${timeLabel(r.date)}`;
+    const text = status === 'Saved' ? `Saved: ${r.boatName}, ${timeLabel(r.date)}. ${recordCount(readyCount)} ready to send.`
+      : `Saved: ${r.boatName}, ${timeLabel(r.date)}. Needs a check.`;
     configureLayoutMotion(reduceMotion);
     const ok = await change(s => ({ ...s, boats: updateSavedBoat(s, r), records: [
       ...(fresh ? [fresh] : []), ...s.records.map(old => old.id === r.id ? { ...old, status, step: 5, revision: old.revision + 1 } as CatchRecord : old)],
