@@ -6,7 +6,7 @@ import { Btn, Card, Choices, Field, Heading, Notice, Overlay, Select, Txt, s } f
 
 export const BOAT_DETAIL_FIELDS = ['vesselType', 'propulsion', 'horsepower', 'length', 'registration', 'crew'] as const;
 export function BoatFields({ r, onChange, original }: { r: CatchRecord; onChange: (patch: Partial<CatchRecord>) => void; original?: CatchRecord }) {
-  const { data, change } = usePrototype();
+  const { data, change, saved, error } = usePrototype();
   const [adding, setAdding] = useState<'boat' | 'fisher' | null>(null);
   const [name, setName] = useState(''), [vessel, setVessel] = useState('');
   if (!data) return null;
@@ -14,21 +14,21 @@ export function BoatFields({ r, onChange, original }: { r: CatchRecord; onChange
   const boats = [...data.boats].sort((a, b) => (recency.indexOf(a.id) < 0 ? 999 : recency.indexOf(a.id)) - (recency.indexOf(b.id) < 0 ? 999 : recency.indexOf(b.id)));
   const fishers = [...data.fishers].sort((a, b) => Number(b.boatIds.includes(r.boatId)) - Number(a.boatIds.includes(r.boatId)));
   const create = async () => {
-    if (!name.trim()) return;
+    if (!name.trim()) return false;
     if (adding === 'boat') {
       const boat: Boat = { id: id('boat'), name: name.trim(), vesselType: vessel, propulsion: '', horsepower: '', length: '', registration: '', crew: '' };
-      await change(s => ({ ...s, boats: [...s.boats, boat] }));
+      if (!await change(s => ({ ...s, boats: [...s.boats, boat] }))) return false;
       onChange(selectBoat(r, boat));
     } else {
       const fisher = { id: id('fisher'), name: name.trim(), boatIds: r.boatId ? [r.boatId] : [] };
-      await change(s => ({ ...s, fishers: [...s.fishers, fisher] }));
+      if (!await change(s => ({ ...s, fishers: [...s.fishers, fisher] }))) return false;
       onChange({ fisherId: fisher.id });
     }
-    setAdding(null);
+    return true;
   };
   return <>
     <Select label="Boat" value={r.boatId} before={original?.boatId} allowEmpty={false}
-      options={boats.map(b => ({ value: b.id, label: b.name, detail: b.vesselType || 'Type not entered' }))}
+      options={boats.map(b => ({ value: b.id, label: b.name, detail: b.vesselType || 'No vessel type' }))}
       onChange={value => { const b = data.boats.find(b => b.id === value); if (b) onChange(selectBoat(r, b)); }} />
     <Btn label="Add new boat" kind="secondary" icon="plus" onPress={() => { setName(''); setVessel(''); setAdding('boat'); }} />
     <Select label="Fisher" value={r.fisherId} before={original?.fisherId}
@@ -37,7 +37,9 @@ export function BoatFields({ r, onChange, original }: { r: CatchRecord; onChange
     <Btn label="Add new fisher" kind="secondary" icon="plus" onPress={() => { setName(''); setAdding('fisher'); }} />
     <Notice>Only the boat is required. Every other field is optional.</Notice>
     {adding ? <Overlay title={adding === 'boat' ? 'Add new boat' : 'Add new fisher'} onClose={() => setAdding(null)}
-      footer={<Btn label={adding === 'boat' ? 'Save boat' : 'Save fisher'} disabled={!name.trim()} onPress={() => { void create(); }} />}>
+      saved={error ? 'Not saved' : saved ? 'Saved on this phone' : 'Saving…'}
+      footer={<Btn label={adding === 'boat' ? 'Save boat' : 'Save fisher'} disabled={!name.trim()} closeOnPress
+        disabledReason={!name.trim() ? `Enter a ${adding} name to continue.` : undefined} onPress={create} />}>
       <Field label="Name" value={name} onChange={setName} />
       {adding === 'boat' ? <Select label="Vessel type" value={vessel} options={VESSELS.map(v => ({ value: v, label: v }))} onChange={setVessel} /> : null}
       <Txt muted>Synthetic names only. This registry is saved on this phone.</Txt>
@@ -84,8 +86,8 @@ export function GearTrip({ r, onChange, original }: { r: CatchRecord; onChange: 
     <Field label="Area fished" value={r.area} before={original?.area} onChange={area => onChange({ area })} />
     <Field label="Date and time out" hint="YYYY-MM-DDTHH:MM · East Africa time" value={r.timeOut} before={original?.timeOut} onChange={timeOut => onChange({ timeOut })} />
     <Field label="Date and time in" hint="YYYY-MM-DDTHH:MM · East Africa time" value={r.timeIn} before={original?.timeIn} onChange={timeIn => onChange({ timeIn })} />
-    <Choices label="FAD fishing" value={r.fad} options={['Yes', 'No', 'Not entered']} onChange={v => onChange({ fad: v === 'Not entered' ? '' : v, fadType: v === 'Yes' ? r.fadType : '' })} />
+    <Choices label="FAD fishing" value={r.fad} options={['Yes', 'No', 'Not recorded']} onChange={v => onChange({ fad: v === 'Not recorded' ? '' : v, fadType: v === 'Yes' ? r.fadType : '' })} />
     {r.fad === 'Yes' ? <Choices label="FAD type" value={r.fadType} options={['Anchored', 'Free floating']} onChange={fadType => onChange({ fadType })} /> : null}
-    {original && (r.fad !== original.fad || r.fadType !== original.fadType) ? <Txt small bold>Changed · Was: {original.fad || 'Not entered'} {original.fadType}</Txt> : null}
+    {original && (r.fad !== original.fad || r.fadType !== original.fadType) ? <Txt small bold>Changed · Was: {original.fad || 'Not recorded'} {original.fadType}</Txt> : null}
   </>;
 }

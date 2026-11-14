@@ -48,7 +48,8 @@ const colors = {
 
     // Borders and input outlines
     border: '#CFDCD7',
-    input: '#C0D1CA',
+    // Reach about 3:1 against the app surfaces for outdoor field use.
+    input: '#788A83',
     deepSea: '#123F42',
     seaGlass: '#D7EEE7',
     sand: '#F4E9D5',
@@ -59,6 +60,7 @@ const colors = {
     dangerSoft: '#FBE9E5',
     processing: '#1E4E8C',
     processingSoft: '#E7F0FA',
+    scrim: 'rgba(18,63,66,0.48)',
   },
 
   // Border radius (in px). Sync from the sibling web artifact's --radius

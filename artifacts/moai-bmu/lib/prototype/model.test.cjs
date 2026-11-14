@@ -15,8 +15,11 @@ test('full catalog and internally consistent sample states', () => {
   const state = M.makeFixtures();
   assert.equal(state.boats.length, 5);
   assert.equal(M.SPECIES.length, 44);
-  assert.deepEqual(new Set(state.records.map(M.displayStatus)), new Set(['Saved', 'Needs review', 'Approved', 'Sent', 'Draft']));
+  assert.deepEqual(new Set(state.records.map(M.displayStatus)), new Set(['Saved', 'Needs review', 'Sent', 'Draft']));
   assert.equal(state.records.filter(r => r.status === 'Needs review').length, 3);
+  assert.equal(M.recordCount(0), 'No records');
+  assert.equal(M.recordCount(1), '1 record');
+  assert.equal(M.recordCount(4), '4 records');
   assert.equal(state.schedule.enabled, false);
 });
 test('only boat required; missing measurements never become zero', () => {
@@ -26,7 +29,7 @@ test('only boat required; missing measurements never become zero', () => {
   const lines = [M.blankLine('Rabbit fish')];
   assert.equal(M.totals(lines).weight, null);
   assert.equal(M.totals(lines).value, null);
-  assert.match(M.totalText(lines), /Weight not entered/);
+  assert.match(M.totalText(lines), /No weight or price yet/);
   const t = M.totals([{ ...lines[0], weight: '12', price: '300' }, M.blankLine('Mullets')]);
   assert.deepEqual(t, { weight: 12, value: 3600, missingWeights: 1, missingValues: 1 });
   assert.equal(M.numberValue('0'), 0);
@@ -40,15 +43,21 @@ test('boat snapshot is independent of later registry updates', () => {
   assert.equal(r.crew, '4');
   assert.equal(r.updateBoat, false);
 });
-test('photo A suggests only counts/species and blocks saving two uncertain rows', () => {
+test('photo A suggests species without measures and saves uncertain rows for review', () => {
   const state = M.makeFixtures(), r = savedRecord();
   const finished = M.finishPhoto(state, { ...r, photo: { scenario: 'A', state: 'processing' } });
   assert.equal(finished.lines.length, 8);
   assert.equal(M.needsCheck(finished), 2);
   assert.ok(finished.lines.every(l => l.weight === ''));
-  assert.equal(M.canSave(finished), false);
-  assert.equal(M.canSave({ ...finished, lines: finished.lines.map(l => ({ ...l, checked: true })) }), true);
-  assert.equal(M.canSave({ ...r, photo: { scenario: 'B', state: 'processing' } }), false);
+  assert.deepEqual(finished.lines.find(l => l.speciesId === 'Parrot fish').alternatives, ['Rabbit fish', 'Scavengers']);
+  assert.deepEqual(finished.lines.find(l => l.speciesId === 'Mullets').alternatives, ['Cavalla jacks', 'Barracuda']);
+  assert.equal(M.blankLine('Mixed demersals').checked, true);
+  assert.equal(M.canSave(finished), true);
+  assert.equal(M.canSend(finished), false);
+  const reviewed = { ...finished, lines: finished.lines.map(l => ({ ...l, checked: true })) };
+  assert.equal(M.canSave(reviewed), true);
+  assert.equal(M.canSend(reviewed), true);
+  assert.equal(M.canSave({ ...r, photo: { scenario: 'B', state: 'processing' } }), true);
 });
 test('slow and late results do not replace manual values or duplicate automatically', () => {
   const state = M.makeFixtures(), manual = { ...M.blankLine('Rabbit fish'), weight: '17.5', price: '410', count: '21' };
@@ -67,17 +76,22 @@ test('empty/error/cancelled photo outcomes remain manual and never infer measure
   const cancelled = { ...savedRecord(), photo: { scenario: 'B', state: 'cancelled' } };
   assert.equal(M.finishPhoto(M.makeFixtures(), cancelled), cancelled);
 });
-test('price recall is same-day/species only, excluding deleted and this draft', () => {
+test('day prices are keyed by site, landing day, and species', () => {
   const state = M.makeFixtures();
-  state.records = [{ ...savedRecord(), id: 'old', date: new Date().toISOString(), lines: [{ ...M.blankLine('Rabbit fish'), price: '350' }] }];
-  assert.equal(M.priceToday(state, 'Rabbit fish'), '350');
-  assert.equal(M.priceToday(state, 'Rabbit fish', 'old'), '');
-  assert.equal(M.priceToday(state, 'Mullets'), '');
-  state.records[0].date = new Date(Date.now() - 86400000).toISOString();
-  assert.equal(M.priceToday(state, 'Rabbit fish'), '');
+  const old = { ...savedRecord(), id: 'old', date: new Date().toISOString(), site: 'North landing',
+    lines: [{ ...M.blankLine('Rabbit fish'), price: '350' }] };
+  state.records = [old];
+  state.dayPrices = M.setDayPrice(state, old.site, old.date, 'Rabbit fish', '350', old.date);
+  assert.equal(M.priceToday(state, 'Rabbit fish', 'old'), '350');
+  assert.equal(M.dayPriceFor(state, 'Rabbit fish', '', old.date, 'North landing').price, '350');
+  assert.equal(M.dayPriceFor(state, 'Rabbit fish', '', old.date, 'South landing'), undefined);
+  assert.equal(M.priceToday(state, 'Mullets', 'old'), '');
+  const yesterday = new Date(Date.now() - 86400000).toISOString();
+  assert.equal(M.dayPriceFor(state, 'Rabbit fish', '', yesterday, old.site), undefined);
+  assert.equal(M.priceYesterday(state, 'Rabbit fish', 'old'), '');
 });
-test('edits require reasons, record field history and demote Approved or Sent', () => {
-  const r = { ...savedRecord(), status: 'Approved', lines: [{ ...M.blankLine('Rabbit fish'), weight: '14' }] };
+test('edits require reasons, label note history and demote sent records', () => {
+  const r = { ...savedRecord(), status: 'Sent', sentAt: new Date().toISOString(), lines: [{ ...M.blankLine('Rabbit fish'), weight: '14' }] };
   const working = { ...r, lines: [{ ...r.lines[0], weight: '12' }] };
   assert.throws(() => M.saveEdit(r, working, ''), /reason/);
   assert.throws(() => M.saveEdit(r, r, 'Wrong weight'), /No changes/);
@@ -86,8 +100,9 @@ test('edits require reasons, record field history and demote Approved or Sent', 
   assert.equal(edited.history.at(-1).was, '14');
   assert.equal(edited.history.at(-1).now, '12');
   assert.equal(edited.history.at(-1).reason, 'Wrong weight');
+  assert.equal(M.saveEdit({ ...savedRecord(), notes: 'Old note' }, { ...savedRecord(), notes: 'New note' }, 'Missing information').history.at(-1).field, 'Notes changed');
   assert.equal(M.saveEdit({ ...r, status: 'Saved', sentAt: r.date }, working, 'Wrong weight').status, 'Needs review');
-  assert.equal(M.saveEdit({ ...r, status: 'Saved' }, working, 'Wrong weight').status, 'Saved');
+  assert.equal(M.saveEdit({ ...r, status: 'Saved', sentAt: undefined }, working, 'Wrong weight').status, 'Saved');
 });
 test('filters persist semantics and distinguish visible Sent from Saved', () => {
   const state = M.makeFixtures();
@@ -108,11 +123,11 @@ test('periods/emails and eligible exclusions are precise', () => {
   assert.equal(M.validEmail('bad@'), false);
   assert.equal(M.validEmail('name@example.com'), true);
   const preview = M.sendPreview(state, from, to);
-  assert.equal(preview.eligible.length, 5);
-  assert.equal(preview.excluded.length, 4);
-  assert.ok(preview.eligible.every(r => ['Saved', 'Approved'].includes(r.status)));
+  assert.equal(preview.eligible.length, 4);
+  assert.equal(preview.excluded.length, 5);
+  assert.ok(preview.eligible.every(r => r.status === 'Saved' && !r.sentAt));
   state.records[0].deleted = true;
-  assert.equal(M.sendPreview(state, from, to).eligible.length, 4);
+  assert.equal(M.sendPreview(state, from, to).eligible.length, 3);
 });
 test('one-off send is local-only; offline queue has no automatic dispatch', () => {
   const state = M.makeFixtures();
@@ -182,6 +197,30 @@ test('failed writes reject, keep durable state, and later retries recover', asyn
   await storage.write({ ...initial, revision: 2 });
   assert.equal((await storage.read()).revision, 2);
 });
+test('legacy Approved prototype data loads as Saved without changing legacy storage', async () => {
+  const state = M.makeFixtures();
+  state.records[2].status = 'Approved';
+  state.filters.statuses = ['Approved'];
+  const storage = createLocalStorage({ getItem: async () => JSON.stringify(state), setItem: async () => {} });
+  const loaded = await storage.read();
+  assert.equal(loaded.records[2].status, 'Saved');
+  assert.deepEqual(loaded.filters.statuses, []);
+});
+test('older local records gain site, no-catch, price-source and day-price data safely', async () => {
+  const state = M.makeFixtures();
+  delete state.dayPrices;
+  delete state.records[0].site;
+  delete state.records[0].noCatch;
+  delete state.records[0].lines[0].priceSource;
+  delete state.records[0].lines[0].priceSetAt;
+  const storage = createLocalStorage({ getItem: async () => JSON.stringify(state), setItem: async () => {} });
+  const loaded = await storage.read();
+  assert.equal(loaded.records[0].site, state.settings.site);
+  assert.equal(loaded.records[0].noCatch, false);
+  assert.equal(loaded.records[0].lines[0].priceSource, "today's price");
+  assert.ok(loaded.records[0].lines[0].priceSetAt);
+  assert.ok(loaded.dayPrices.some(p => p.site === state.settings.site && p.speciesId === loaded.records[0].lines[0].speciesId));
+});
 test('prototype UI and state have no delivery, model, share, network or background-task calls', () => {
   const base = path.resolve(__dirname, '../../components/prototype');
   const files = [...fs.readdirSync(base).map(n => path.join(base, n)), ...['store.tsx', 'storage.ts', 'model.ts'].map(n => path.join(__dirname, n))];
@@ -201,4 +240,10 @@ test('text/token contrast meets 4.5:1 for normal, muted and status text', () => 
     const a = lum(fg), b = lum(bg), ratio = (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
     assert.ok(ratio >= 4.5, `${fg} on ${bg}: ${ratio}`);
   }
+  for (const bg of [C.background, C.card]) {
+    const a = lum(C.input), b = lum(bg), ratio = (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+    assert.ok(ratio >= 3, `Input/button border ${C.input} on ${bg}: ${ratio}`);
+  }
+  const dangerRatio = (Math.max(lum(C.destructiveForeground), lum(C.destructive)) + .05) / (Math.min(lum(C.destructiveForeground), lum(C.destructive)) + .05);
+  assert.ok(dangerRatio >= 4.5, `Danger button text contrast: ${dangerRatio}`);
 });

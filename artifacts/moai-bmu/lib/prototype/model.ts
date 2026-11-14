@@ -30,18 +30,20 @@ export const GEARS = [
   'HL · Handline', 'BS · Beach seine', 'RN · Ring net', 'SN · Scoop net',
   'MF · Monofilament', 'RS · Reef seine', 'CN · Cast net', 'TL · Trolling line', 'OT · Other',
 ];
-export type Status = 'Draft' | 'Needs review' | 'Saved' | 'Approved';
+export type Status = 'Draft' | 'Needs review' | 'Saved' | 'Waiting to send' | 'Couldn’t send' | 'Sent';
 export type Boat = { id: string; name: string; vesselType: string; propulsion: string; horsepower: string; length: string; registration: string; crew: string };
 export type Fisher = { id: string; name: string; boatIds: string[] };
-export type CatchLine = { id: string; speciesId: string; count: string; weight: string; price: string; remarks: string; checked: boolean; origin: 'manual' | 'photo' };
+export type PriceSource = "typed here" | "today's price" | 'changed here';
+export type CatchLine = { id: string; speciesId: string; count: string; weight: string; price: string; remarks: string; checked: boolean; origin: 'manual' | 'photo'; alternatives?: string[]; priceSource?: PriceSource; priceSetAt?: string };
+export type DayPrice = { site: string; date: string; speciesId: string; price: string; setAt: string };
 export type Photo = { scenario: 'A' | 'B' | 'C' | 'Error'; state: 'preview' | 'processing' | 'ready' | 'empty' | 'error' | 'cancelled'; startedAt?: number; dueAt?: number };
 export type History = { at: string; field: string; was: string; now: string; reason: string };
 export type CatchRecord = {
-  id: string; date: string; boatId: string; boatName: string; fisherId: string;
+  id: string; date: string; site: string; boatId: string; boatName: string; fisherId: string;
   vesselType: string; propulsion: string; horsepower: string; length: string; registration: string;
   crew: string; gear: string; gearCount: string; mesh: string; hookSize: string; hooks: string;
   area: string; timeOut: string; timeIn: string; fad: string; fadType: string;
-  lines: CatchLine[]; suggestions: CatchLine[]; notes: string; photo?: Photo;
+  lines: CatchLine[]; suggestions: CatchLine[]; notes: string; noCatch: boolean; photo?: Photo;
   status: Status; step: number; updateBoat: boolean; history: History[];
   deleted?: boolean; sentAt?: string; revision: number; editedAt?: string;
 };
@@ -52,7 +54,7 @@ export type Schedule = { enabled: boolean; frequency: string; weeks: string; ema
 export type EditSession = { recordId: string; working: CatchRecord; reason: string; otherReason: string; section: string };
 export type Undo = { kind: 'line' | 'edit' | 'delete' | 'discard' | 'discardEdit'; target?: 'edit'; editSession?: EditSession; before: CatchRecord; line?: CatchLine; index?: number; afterRevision: number; expiresAt: number; label: string };
 export type PrototypeState = {
-  version: 1; records: CatchRecord[]; boats: Boat[]; fishers: Fisher[]; recipients: string[];
+  version: 1; records: CatchRecord[]; boats: Boat[]; fishers: Fisher[]; recipients: string[]; dayPrices: DayPrice[];
   settings: { collector: string; county: string; site: string; offline: boolean; failSaves: boolean; nextPhoto: 'A' | 'B' | 'C' | 'Error' };
   filters: Filters; schedule: Schedule; attempts: Attempt[]; sendDraft?: SendDraft; edit?: EditSession;
   undo?: Undo; banner?: { text: string; recordId: string }; revision: number;
@@ -72,12 +74,16 @@ export const speciesName = (speciesId: string) => {
   return s ? `${s.common}${s.local ? ` (${s.local})` : ''}` : speciesId;
 };
 export const emptyFilters = (): Filters => ({ days: '7', from: '', to: '', boatId: '', fisherId: '', statuses: [], species: [], search: '' });
-export const blankLine = (speciesId: string, price = ''): CatchLine => ({ id: id('catch'), speciesId, count: '', weight: '', price, remarks: '', checked: true, origin: 'manual' });
-export function blankRecord(): CatchRecord {
-  return { id: id('record'), date: new Date().toISOString(), boatId: '', boatName: '', fisherId: '',
+export const recordCount = (count: number) => count === 0 ? 'No records' : count === 1 ? '1 record' : `${count} records`;
+export const blankLine = (speciesId: string, price = '', priceSetAt?: string): CatchLine => ({
+  id: id('catch'), speciesId, count: '', weight: '', price, remarks: '', checked: true, origin: 'manual',
+  ...(price ? { priceSource: "today's price" as const, priceSetAt } : {}),
+});
+export function blankRecord(site = 'Demo landing site'): CatchRecord {
+  return { id: id('record'), date: new Date().toISOString(), site, boatId: '', boatName: '', fisherId: '',
     vesselType: '', propulsion: '', horsepower: '', length: '', registration: '', crew: '', gear: '', gearCount: '',
     mesh: '', hookSize: '', hooks: '', area: '', timeOut: '', timeIn: localTime(), fad: '', fadType: '',
-    lines: [], suggestions: [], notes: '', status: 'Draft', step: 1, updateBoat: false, history: [], revision: 0 };
+    lines: [], suggestions: [], notes: '', noCatch: false, status: 'Draft', step: 1, updateBoat: false, history: [], revision: 0 };
 }
 export function selectBoat(record: CatchRecord, boat: Boat): CatchRecord {
   return { ...record, boatId: boat.id, boatName: boat.name, vesselType: boat.vesselType, propulsion: boat.propulsion,
@@ -95,25 +101,50 @@ export function totals(lines: CatchLine[]) {
 }
 export function totalText(lines: CatchLine[]) {
   const t = totals(lines);
-  return `${t.weight === null ? 'Weight not entered' : `${t.weight.toLocaleString('en-KE', { maximumFractionDigits: 2 })} kg${t.missingWeights ? ' entered' : ''}`} · ${t.value === null ? 'Value not entered' : `Ksh ${t.value.toLocaleString('en-KE', { maximumFractionDigits: 2 })}${t.missingValues ? ' entered' : ''}`}`;
+  if (t.weight === null && t.value === null) return 'No weight or price yet';
+  const weight = t.weight === null ? 'No weight yet' : `${t.weight.toLocaleString('en-KE', { maximumFractionDigits: 2 })} kg${t.missingWeights ? ` (${t.missingWeights} without weight)` : ''}`;
+  const value = t.value === null ? 'No price yet' : `Ksh ${t.value.toLocaleString('en-KE', { maximumFractionDigits: 2 })}${t.missingValues ? ` (${t.missingValues} incomplete)` : ''}`;
+  return `${weight} · ${value}`;
 }
 export const needsCheck = (r: CatchRecord) => r.lines.filter(l => !l.checked).length;
-export const canSave = (r: CatchRecord) => !!r.boatId && r.photo?.state !== 'processing' && needsCheck(r) === 0 && validNumbers(r);
+export const canSave = (r: CatchRecord) => !!r.boatId && validNumbers(r);
+export const canSend = (r: CatchRecord) => canSave(r) && needsCheck(r) === 0 && r.photo?.state !== 'processing';
 export function validNumbers(r: CatchRecord) {
   return [r.horsepower, r.length, r.crew, r.gearCount, r.mesh, r.hooks, ...r.lines.flatMap(l => [l.count, l.weight, l.price])]
     .every(v => !v.trim() || numberValue(v) !== null);
 }
-export const displayStatus = (r: CatchRecord) => r.photo?.state === 'processing' ? 'Processing' : r.sentAt && ['Saved', 'Approved'].includes(r.status) ? 'Sent' : r.status;
-export const priceToday = (state: PrototypeState, speciesId: string, exceptId = '') => [...state.records]
-  .filter(r => !r.deleted && r.id !== exceptId && dayKey(r.date) === dayKey())
-  .sort((a, b) => b.date.localeCompare(a.date))
-  .flatMap(r => r.lines).find(l => l.speciesId === speciesId && numberValue(l.price) !== null)?.price ?? '';
+export const displayStatus = (r: CatchRecord) => r.photo?.state === 'processing' ? 'Processing' : r.sentAt || r.status === 'Sent' ? 'Sent' : r.status;
+export function dayPriceFor(state: PrototypeState, speciesId: string, recordId = '', date?: string, site?: string) {
+  const record = state.records.find(r => r.id === recordId);
+  const targetDate = dayKey(date ?? record?.date ?? new Date());
+  const targetSite = site ?? record?.site ?? state.settings.site;
+  return state.dayPrices?.find(item => item.site === targetSite && item.date === targetDate && item.speciesId === speciesId
+    && numberValue(item.price) !== null);
+}
+export const priceToday = (state: PrototypeState, speciesId: string, recordId = '') =>
+  dayPriceFor(state, speciesId, recordId)?.price ?? '';
+export const priceYesterday = (state: PrototypeState, speciesId: string, recordId = '') => {
+  const record = state.records.find(r => r.id === recordId);
+  const [year, month, date] = dayKey(record?.date ?? new Date()).split('-').map(Number);
+  const yesterday = new Date(Date.UTC(year, month - 1, date - 1, 12));
+  return dayPriceFor(state, speciesId, '', yesterday.toISOString(), record?.site)?.price ?? '';
+};
+export function setDayPrice(state: PrototypeState, site: string, date: string, speciesId: string, price: string, setAt = new Date().toISOString()) {
+  const day = dayKey(date);
+  return [...(state.dayPrices ?? []).filter(item => !(item.site === site && item.date === day && item.speciesId === speciesId)),
+    { site, date: day, speciesId, price, setAt }];
+}
 export function photoLines(state: PrototypeState, recordId: string): CatchLine[] {
   return [
     ['Rabbit fish', '12'], ['Scavengers', '8'], ['Snappers', '5'], ['Parrot fish', '4'],
     ['Octopus', '2'], ['Mullets', '10'], ['Goat fish', '3'], ['Barracuda', '1'],
-  ].map(([speciesId, count]) => ({ ...blankLine(speciesId, priceToday(state, speciesId, recordId)), count,
-    checked: !['Parrot fish', 'Mullets'].includes(speciesId), origin: 'photo' }));
+  ].map(([speciesId, count]) => {
+    const daily = dayPriceFor(state, speciesId, recordId);
+    const checked = !['Parrot fish', 'Mullets'].includes(speciesId);
+    return { ...blankLine(speciesId, daily?.price ?? '', daily?.setAt), count,
+      ...(checked ? {} : { alternatives: speciesId === 'Parrot fish' ? ['Rabbit fish', 'Scavengers'] : ['Cavalla jacks', 'Barracuda'] }),
+      checked, origin: 'photo' as const };
+  });
 }
 export function finishPhoto(state: PrototypeState, r: CatchRecord): CatchRecord {
   if (r.photo?.state !== 'processing') return r;
@@ -127,13 +158,13 @@ export function finishPhoto(state: PrototypeState, r: CatchRecord): CatchRecord 
 export const recordFields = ['boatId', 'boatName', 'fisherId', 'vesselType', 'propulsion', 'horsepower', 'length', 'registration', 'crew', 'gear', 'gearCount', 'mesh', 'hookSize', 'hooks', 'area', 'timeOut', 'timeIn', 'fad', 'fadType', 'notes'] as const;
 export function differences(original: CatchRecord, changed: CatchRecord): Omit<History, 'at' | 'reason'>[] {
   const changes: Omit<History, 'at' | 'reason'>[] = [];
-  for (const key of recordFields) if (original[key] !== changed[key]) changes.push({ field: key, was: original[key] || 'Not entered', now: changed[key] || 'Not entered' });
+  for (const key of recordFields) if (original[key] !== changed[key]) changes.push({ field: key === 'notes' ? 'Notes changed' : key, was: original[key] || 'No value yet', now: changed[key] || 'No value yet' });
   const ids = [...new Set([...original.lines, ...changed.lines].map(l => l.id))];
   for (const lineId of ids) {
     const before = original.lines.find(l => l.id === lineId), after = changed.lines.find(l => l.id === lineId);
-    if (!before || !after) changes.push({ field: `Catch · ${speciesName((before ?? after)!.speciesId)}`, was: before ? JSON.stringify(before) : 'Not entered', now: after ? JSON.stringify(after) : 'Removed' });
+    if (!before || !after) changes.push({ field: `Catch · ${speciesName((before ?? after)!.speciesId)}`, was: before ? JSON.stringify(before) : 'No value yet', now: after ? JSON.stringify(after) : 'Removed' });
     else for (const key of ['speciesId', 'count', 'weight', 'price', 'remarks', 'checked'] as const) {
-      if (before[key] !== after[key]) changes.push({ field: `${speciesName(before.speciesId)} · ${key}`, was: String(before[key] === '' ? 'Not entered' : before[key]), now: String(after[key] === '' ? 'Not entered' : after[key]) });
+      if (before[key] !== after[key]) changes.push({ field: `${speciesName(before.speciesId)} · ${key}`, was: String(before[key] === '' ? 'No value yet' : before[key]), now: String(after[key] === '' ? 'No value yet' : after[key]) });
     }
   }
   return changes;
@@ -144,7 +175,7 @@ export function saveEdit(original: CatchRecord, working: CatchRecord, reason: st
   if (!changes.length) throw new Error('No changes to save.');
   if (!working.boatId || !validNumbers(working)) throw new Error('Choose a boat and check the numeric fields.');
   const at = new Date().toISOString();
-  const needsReview = original.status === 'Approved' || !!original.sentAt || !canSave(working);
+  const needsReview = original.status === 'Sent' || !!original.sentAt || !canSave(working) || needsCheck(working) > 0 || working.photo?.state === 'processing';
   return { ...working, status: needsReview ? 'Needs review' : original.status, sentAt: undefined,
     editedAt: at, revision: original.revision + 1, history: [...original.history, ...changes.map(c => ({ ...c, at, reason }))] };
 }
@@ -172,8 +203,8 @@ export function dateRange(period: string, from = '', to = '', now = new Date()):
 export const validRange = (from: string, to: string) => /^\d{4}-\d{2}-\d{2}$/.test(from) && /^\d{4}-\d{2}-\d{2}$/.test(to) && !Number.isNaN(Date.parse(from)) && !Number.isNaN(Date.parse(to)) && from <= to && new Date(from).toISOString().slice(0, 10) === from && new Date(to).toISOString().slice(0, 10) === to;
 export function sendPreview(state: PrototypeState, from: string, to: string) {
   const inPeriod = state.records.filter(r => !r.deleted && dayKey(r.date) >= from && dayKey(r.date) <= to);
-  return { eligible: inPeriod.filter(r => ['Saved', 'Approved'].includes(r.status) && canSave(r)),
-    excluded: inPeriod.filter(r => !['Saved', 'Approved'].includes(r.status) || !canSave(r)) };
+  return { eligible: inPeriod.filter(r => r.status === 'Saved' && !r.sentAt && canSend(r)),
+    excluded: inPeriod.filter(r => r.status !== 'Saved' || !!r.sentAt || !canSend(r)) };
 }
 export function simulateSend(state: PrototypeState, draft: SendDraft): { state: PrototypeState; attempt: Attempt } {
   const [from, to] = dateRange(draft.period, draft.from, draft.to);
@@ -218,17 +249,24 @@ export function makeFixtures(): PrototypeState {
     { id: 'imani', name: 'Imani', vesselType: 'Mtumbwi', propulsion: 'Paddle', horsepower: '', length: '3', registration: '', crew: '1' },
   ];
   const fishers: Fisher[] = ['Demo Amani', 'Demo Salama', 'Demo Juma', 'Demo Zawadi', 'Demo Bahati'].map((name, i) => ({ id: `fisher-${i}`, name, boatIds: [boats[i].id] }));
-  const statuses: Status[] = ['Saved', 'Needs review', 'Approved', 'Saved', 'Draft', 'Needs review', 'Needs review', 'Saved', 'Saved'];
+  const statuses: Status[] = ['Saved', 'Needs review', 'Saved', 'Saved', 'Draft', 'Needs review', 'Needs review', 'Saved', 'Saved'];
   const records = statuses.map((status, index) => {
     const r = selectBoat(blankRecord(), boats[index % 5]);
     const date = new Date(Date.now() - Math.floor(index / 3) * 86400000 - index * 600000).toISOString();
     return { ...r, id: `sample-${index}`, date, fisherId: fishers[index % 5].id, status, step: status === 'Draft' ? 3 : 5,
       sentAt: index === 3 ? date : undefined, gear: GEARS[index % GEARS.length],
-      lines: [{ ...blankLine(index % 2 ? 'Mullets' : 'Rabbit fish', index === 8 ? '' : '300'),
+      lines: [{ ...blankLine(index % 2 ? 'Mullets' : 'Rabbit fish', index === 8 ? '' : '300', date),
         id: `sample-line-${index}`, weight: index === 8 ? '' : String(8 + index), count: String(10 + index), checked: status !== 'Needs review' }],
       notes: index === 8 ? 'Partial record: no measurements entered.' : 'Synthetic sample record.' };
   });
-  return { version: 1, revision: 0, records, boats, fishers, recipients: ['demo.recipient@example.com'],
+  const dayPrices: DayPrice[] = [];
+  for (const record of [...records].sort((a, b) => b.date.localeCompare(a.date))) {
+    for (const line of record.lines) {
+      if (!line.price || dayPrices.some(item => item.site === record.site && item.date === dayKey(record.date) && item.speciesId === line.speciesId)) continue;
+      dayPrices.push({ site: record.site, date: dayKey(record.date), speciesId: line.speciesId, price: line.price, setAt: record.date });
+    }
+  }
+  return { version: 1, revision: 0, records, boats, fishers, recipients: ['demo.recipient@example.com'], dayPrices,
     settings: { collector: 'Demo collector', county: 'Demo county', site: 'Demo landing site', offline: true, failSaves: false, nextPhoto: 'A' },
     filters: emptyFilters(), attempts: [{ id: 'sample-send', at: records[3].date, from: dayKey(Date.now() - 13 * 86400000), to: dayKey(), email: 'demo.recipient@example.com', message: '', recordIds: [records[3].id], state: 'Sent' }],
     schedule: { enabled: false, frequency: 'Every 2 weeks', weeks: '2', email: 'demo.recipient@example.com', firstDate: dayKey(Date.now() + 86400000) } };

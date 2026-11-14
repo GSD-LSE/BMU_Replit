@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { finishPhoto, makeFixtures, type PrototypeState } from './model';
 import { createLocalStorage } from './storage';
+import { configureLayoutMotion, isReducedMotionEnabled } from '@/components/prototype/motion';
 
 type Mutation = (current: PrototypeState) => PrototypeState;
 type Store = {
@@ -30,7 +31,7 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
     void (async () => {
       try {
         const loaded = await storage.current.read();
-        const parsed = loaded ?? makeFixtures();
+        const parsed = loaded ? { ...loaded, banner: undefined } : makeFixtures();
         current.current = parsed;
         if (alive.current) {
           setData(parsed);
@@ -43,7 +44,14 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
   }, []);
   const change = async (mutation: Mutation) => {
     if (!current.current) return false;
-    const next = { ...mutation(current.current), revision: current.current.revision + 1 };
+    const previous = current.current;
+    const next = { ...mutation(previous), revision: previous.revision + 1 };
+    const photoFinished = previous.records.some(record => record.photo?.state === 'processing'
+      && next.records.find(nextRecord => nextRecord.id === record.id)?.photo?.state !== 'processing');
+    const filtersChanged = JSON.stringify(previous.filters) !== JSON.stringify(next.filters);
+    const layoutChanged = (!!next.undo !== !!previous.undo) || next.banner?.text !== previous.banner?.text
+      || next.edit?.section !== previous.edit?.section || filtersChanged || photoFinished;
+    if (layoutChanged) configureLayoutMotion(isReducedMotionEnabled());
     current.current = next;
     setData(next);
     return persist(next);
