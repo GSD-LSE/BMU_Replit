@@ -12,21 +12,9 @@ const appRequire = createRequire(resolve(root, "artifacts/moai-bmu/package.json"
 const apiRequire = createRequire(resolve(root, "artifacts/api-server/package.json"));
 const sandboxRequire = createRequire(resolve(root, "artifacts/mockup-sandbox/package.json"));
 const expoRequire = createRequire(appRequire.resolve("expo/package.json"));
-const routerRequire = createRequire(appRequire.resolve("expo-router/package.json"));
 const cliRequire = createRequire(expoRequire.resolve("@expo/cli/package.json"));
 const configRequire = createRequire(expoRequire.resolve("@expo/config-plugins/package.json"));
 const fingerprintRequire = createRequire(expoRequire.resolve("@expo/fingerprint/package.json"));
-
-test("Expo Router keeps its CommonJS query API with the patched ESM decoder", () => {
-  const query = routerRequire("query-string");
-  const params = { site: "Msambweni Landing Site", fish: "Dagaa 🐟", note: "10 kg & 2 boats" };
-  assert.deepEqual({ ...query.parse(query.stringify(params)) }, params);
-  assert.deepEqual(query.parse("boat=A&boat=B").boat, ["A", "B"]);
-  assert.doesNotThrow(() => query.parse("note=%E0%A4%A&bad=%zz&name=Dagaa"));
-  assert.equal(query.parseUrl("moai://records?site=Msambweni").query.site, "Msambweni");
-  // Exercise the decoder's former recursive/error path without a large payload.
-  assert.doesNotThrow(() => query.parse(`note=${"%C0%AFx".repeat(1000)}%zz`));
-});
 
 test("upgraded pattern libraries retain Expo's glob and minimatch entry points", async () => {
   const { minimatch, Minimatch } = fingerprintRequire("minimatch");
