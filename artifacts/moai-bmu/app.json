@@ -12,12 +12,19 @@
     },
     "android": {},
     "web": {
-      "favicon": "./assets/images/moai-icon.png"
+      "favicon": "./assets/images/moai-icon.png",
+      "output": "static"
     },
     "plugins": [
-      "expo-router",
+      [
+        "expo-router",
+        {
+          "apiRoutes": true
+        }
+      ],
       "expo-audio",
-      "expo-sharing"
+      "expo-sharing",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Image, Keyboard, Pressable, Text, TextInput, View } from 'react-native';
+import type { TextInputInstance } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { usePrototype } from '@/lib/prototype/store';
@@ -47,14 +48,14 @@ export function SpeciesPicker({ record, onSelect, onClose }: {
 function CatchLineRow({ line, record, original, lines, open, weightRefs, onToggle, onChange, onChangeSpecies, onRemove,
   onSetDailyPrice, setFirstPriceOnBlur, onFixEarlier }: {
   line: CatchLine; record: CatchRecord; original?: CatchRecord; lines: CatchLine[]; open: boolean;
-  weightRefs: React.MutableRefObject<Record<string, TextInput | null>>;
+  weightRefs: React.MutableRefObject<Record<string, TextInputInstance | null>>;
   onToggle: () => void; onChange: (patch: Partial<CatchLine>) => void; onChangeSpecies: () => void; onRemove: () => void;
   onSetDailyPrice: (speciesId: string, price: string) => void; setFirstPriceOnBlur: boolean;
   onFixEarlier: (recordIds: string[], speciesId: string, price: string) => void;
 }) {
   const { data } = usePrototype();
   const registerKeyboardActions = useRegisterKeyboardActions();
-  const priceRef = useRef<TextInput>(null);
+  const priceRef = useRef<TextInputInstance>(null);
   const [priceOpen, setPriceOpen] = useState(false), [showFixEarlier, setShowFixEarlier] = useState(false), [fixEarlier, setFixEarlier] = useState(false);
   const [selectedRecords, setSelectedRecords] = useState<string[]>([]);
   if (!data) return null;
@@ -184,7 +185,7 @@ export function CatchReview({ r, onChange, onRemove, onSetDailyPrice, onRetakePh
   const reduceMotion = useMotionPrefs();
   const [picker, setPicker] = useState(''), [enlarge, setEnlarge] = useState(false);
   const [openLine, setOpenLine] = useState(''), [noteOpen, setNoteOpen] = useState(!!r.notes);
-  const weightRefs = useRef<Record<string, TextInput | null>>({});
+  const weightRefs = useRef<Record<string, TextInputInstance | null>>({});
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 500); return () => clearInterval(timer); }, []);
   if (!data) return null;

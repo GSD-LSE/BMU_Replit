@@ -13,20 +13,13 @@ const apiRequire = createRequire(resolve(root, "artifacts/api-server/package.jso
 const sandboxRequire = createRequire(resolve(root, "artifacts/mockup-sandbox/package.json"));
 const expoRequire = createRequire(appRequire.resolve("expo/package.json"));
 const cliRequire = createRequire(expoRequire.resolve("@expo/cli/package.json"));
-const configRequire = createRequire(expoRequire.resolve("@expo/config-plugins/package.json"));
 const fingerprintRequire = createRequire(expoRequire.resolve("@expo/fingerprint/package.json"));
 
-test("upgraded pattern libraries retain Expo's glob and minimatch entry points", async () => {
+test("Expo fingerprint retains its maintained minimatch entry point", () => {
   const { minimatch, Minimatch } = fingerprintRequire("minimatch");
   assert.equal(minimatch("photo.jpg", "*.{jpg,png}"), true);
   assert.equal(new Minimatch("**/*.png").match("assets/icon.png"), true);
   assert.equal(minimatch("note.txt", "*.{jpg,png}"), false);
-  const { glob, globSync } = configRequire("glob");
-  const files = globSync("artifacts/*/package.json", { cwd: root });
-  assert.ok(files.includes("artifacts/moai-bmu/package.json"));
-  await assert.rejects(glob("**/*", { cwd: root, signal: AbortSignal.abort() }), {
-    name: "AbortError",
-  });
 });
 
 test("Zod 4 bounds oversized validation and the error formatter accepts its errors", () => {

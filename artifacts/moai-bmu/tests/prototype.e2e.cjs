@@ -49,11 +49,12 @@ const report = { checks: [], apiRequests: [], errors: [], screenshots: [] };
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page.getByTestId('tab-records')).toBeVisible();
     await page.getByRole('tab', { name: 'Needs review', exact: true }).click();
-    await expect.poll(async () => (await data()).filters.statuses.includes('Needs review')).toBe(true);
+    await expect(page.getByTestId('record-sample-1')).toBeVisible();
+    await expect(page.getByTestId('record-sample-0')).toHaveCount(0);
     await field('Search boat or fisher', 'Amani');
     await click('Clear search');
     await shot('02-records-filters');
-    check('B5 Records search, time range calendar choices, status quick filter, and persisted applied filter state are wired');
+    check('B5 Records search, time range calendar choices, and the separate Needs review view are wired');
 
     // Edit an ordinary Saved record through its detail page and reason sheet.
     await page.evaluate(key => {

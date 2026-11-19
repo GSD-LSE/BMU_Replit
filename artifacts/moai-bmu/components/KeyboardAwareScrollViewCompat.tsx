@@ -1,11 +1,12 @@
 import { Platform, ScrollView, ScrollViewProps } from 'react-native';
+import type { ScrollViewInstance } from 'react-native';
 import {
   KeyboardAwareScrollView,
   KeyboardAwareScrollViewProps,
 } from 'react-native-keyboard-controller';
 
 type Props = KeyboardAwareScrollViewProps & ScrollViewProps & {
-  onScrollReady?: (handle: Pick<ScrollView, 'scrollTo'> | null) => void;
+  onScrollReady?: (handle: Pick<ScrollViewInstance, 'scrollTo'> | null) => void;
 };
 
 export function KeyboardAwareScrollViewCompat({

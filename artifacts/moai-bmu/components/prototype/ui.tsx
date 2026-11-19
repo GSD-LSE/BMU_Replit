@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useId, useRef, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Modal, Platform, BackHandler, Keyboard, useWindowDimensions, type KeyboardTypeOptions, type ScrollView } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, Modal, Platform, BackHandler, Keyboard, useWindowDimensions, type KeyboardTypeOptions } from 'react-native';
+import type { ScrollViewInstance, TextInputInstance } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -76,7 +77,7 @@ export function ActionBar({ primary, secondary, danger, variant = 'row' }: {
 export function Field({ label, value, onChange, numeric = false, multiline = false, before, hint, keyboardType, testID, placeholder,
   inputRef, onFocus, onBlur, disabled = false }: {
   label: string; value: string; onChange: (v: string) => void; numeric?: boolean; multiline?: boolean; before?: string;
-  hint?: string; keyboardType?: KeyboardTypeOptions; testID?: string; placeholder?: string; inputRef?: React.Ref<TextInput>;
+  hint?: string; keyboardType?: KeyboardTypeOptions; testID?: string; placeholder?: string; inputRef?: React.Ref<TextInputInstance>;
   onFocus?: () => void; onBlur?: () => void; disabled?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
@@ -138,8 +139,8 @@ export function Shell({ title, subtitle, offline, saved, back, children, footer,
 }) {
   const insets = useSafeAreaInsets();
   const reduceMotion = useMotionPrefs();
-  const scrollRef = useRef<Pick<ScrollView, 'scrollTo'> | null>(null);
-  const onScrollReady = useCallback((handle: Pick<ScrollView, 'scrollTo'> | null) => { scrollRef.current = handle; }, []);
+  const scrollRef = useRef<Pick<ScrollViewInstance, 'scrollTo'> | null>(null);
+  const onScrollReady = useCallback((handle: Pick<ScrollViewInstance, 'scrollTo'> | null) => { scrollRef.current = handle; }, []);
   const scrollTo = useCallback((y: number) => scrollRef.current?.scrollTo({ y: Math.max(0, y), animated: !reduceMotion }), [reduceMotion]);
   const [keyboardVisible, setKeyboardVisible] = useState(false), [keyboardActions, setKeyboardActions] = useState<KeyboardActions | null>(null);
   useEffect(() => {
