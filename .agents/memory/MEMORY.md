@@ -4,3 +4,4 @@
 - [Scenario prototype scope](prototype-scope.md) — B1–B16 preserve action-first Home and local-only practice flows isolated from legacy data.
 - [Trends and county flags](trends-scope.md) — B11–B16 use descriptive, synthetic comparisons; fuel is not recorded and Seasons remains deferred.
 - [Testing callback availability](testing-runtime.md) — when the testing subagent kind is unavailable, run the existing direct Playwright checks instead.
+- [Dependency upgrade compatibility](dependency-upgrade-compatibility.md) — preserve Router 57 query exports and align React type minors across native/web peers during security updates.
