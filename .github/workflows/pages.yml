@@ -35,5 +35,6 @@ jobs:
       - uses: actions/upload-pages-artifact@v4
         with:
           path: artifacts/moai-bmu/dist
+          include-hidden-files: true
       - id: deployment
         uses: actions/deploy-pages@v4
