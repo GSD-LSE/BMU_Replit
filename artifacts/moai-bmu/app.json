@@ -19,7 +19,7 @@
       [
         "expo-router",
         {
-          "apiRoutes": true
+          "apiRoutes": false
         }
       ],
       "expo-audio",
@@ -27,6 +27,7 @@
       "expo-asset"
     ],
     "experiments": {
+      "baseUrl": "/BMU_Replit",
       "typedRoutes": true,
       "reactCompiler": true
     }

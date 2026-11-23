@@ -2,6 +2,14 @@
 
 Phone-portrait, English, offline-first, **synthetic data only**. The current mobile entry implements the supplied `attached_assets/screen-specs_1794602551543.md`, including assumptions A1–A8. Home contains Add record, To review, Send data and recent records; navigation is Home / Records / Settings. There is no approval or analytics flow.
 
+## Share in a phone browser
+
+The repository includes a GitHub Pages workflow that exports the Expo web app and publishes it at `https://gsd-lse.github.io/BMU_Replit/` after Pages is enabled with **GitHub Actions** as its source. The project path is set in `app.json` so its scripts and images load under `/BMU_Replit/`.
+
+This is a public practice prototype with synthetic sample data. Records entered in the browser stay in that browser's local storage; they are not shared across phones or sent to the BMU. Clearing browser data removes them. Use sample data when sharing the link.
+
+GitHub Pages requires an eligible GitHub plan for a private repository. If the organization cannot enable Pages for this repository, the same web export can be hosted elsewhere without changing the prototype's local-only behavior; update the web base path for that host first.
+
 ## Isolation and safety
 
 - New prototype state uses **`moai-bmu-scenarios-v1`**. The older `moai-bmu-demo-v1` storage and legacy capture component remain separate, unchanged by reset.
